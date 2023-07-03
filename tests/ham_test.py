@@ -6,9 +6,10 @@ Created on Wed Jan 26 14:37:59 2022
 @author: benjaminyuen
 """
 
-# Add diracpy parent directory to system path for testing
-import sys
-sys.path.insert(0, '../src/')
+# # Add diracpy parent directory to system path for testing
+# import sys
+# # sys.path.insert(0, '../src/')
+# sys.path.insert(0, '/Users/benjaminyuen/Documents/Documents - Benjamin’s MacBook Pro/Ben/physics/Birmingham/QuantumCode/diracpy_project/src')
 
 import diracpy as dp
 import numpy as np
@@ -47,6 +48,7 @@ ham_v_cav = g * (cav.a * atom.sigma_plus1 + cav.adag * atom.sigma_minus1
                  + cav.a * atom.sigma_plus2 + cav.adag * atom.sigma_minus2)
 #ham = ham0 + ham_v_pump + ham_v_cav
 initialbasis = [(0,0,'g1'),(-1,0,'e'),(-1,1,'g2')]
+# initialbasis = [dp.ket(state) for state in initialbasis] # initial basis can be tuples of kets
 # static qunatum system:
 #testsys = dp.qsys(ham, initialstates = initialbasis, n_int = 0, jump_ops = [np.sqrt(kappa) * cav.a])
 # Dynamic pumping

@@ -57,7 +57,10 @@ class qsys:
                 [new_states.append(new_state) for new_state in state_out_components if new_state not in self.basis]
             self.basis += new_states
         # add states these decay to
-        basis_incomplete = True
+        if len(self.jump_ops) == 0:
+            basis_incomplete = False
+        else:
+            basis_incomplete = True
         while basis_incomplete:
             new_states = []
             for state in self.basis:
