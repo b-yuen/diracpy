@@ -40,9 +40,10 @@ class qsys:
         except TypeError:
             self.jump_ops = [ kwargs['jump_ops'] ]
         if 'initialstates' in kwargs:
-#            print('building hamiltonian...')
+            print('building hamiltonian...')
             n_int = kwargs.get('n_int', 0)
             self.build(kwargs['initialstates'], n_int)
+            print('built')
         self.make_lindblads()
         
     def build(self, initialstates, n_int):
@@ -62,6 +63,7 @@ class qsys:
         else:
             basis_incomplete = True
         while basis_incomplete:
+            print('...appending decay subspaces...')
             new_states = []
             for state in self.basis:
                 for jump_op in self.jump_ops:
@@ -95,8 +97,10 @@ class qsys:
             raise TypeError("first positional argument should be of type diracpy.states_operators.qop")
         matrix_out = np.zeros([self.dim, self.dim], complex)
         for i, basis_bra in enumerate(self.adjoint_basis):
+            _brapsi = basis_bra * operator
             for j, basis_ket in enumerate(self.basis):
-                matrix_out[i,j] = basis_bra * operator * basis_ket
+                # matrix_out[i,j] = basis_bra * operator * basis_ket
+                matrix_out[i,j] = _brapsi * basis_ket
         return matrix_out
     
     def print_basis(self):

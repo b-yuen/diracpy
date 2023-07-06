@@ -198,11 +198,11 @@ class bra(qvec):
         return conj_ket
     
 class qop:
-    def __init__(self, action, conj_action = 0):
+    def __init__(self, action, conj_action = None):
         # action should be a function which takes as input a ket and returns a ket
         # the action function should correspond to the linear operators action on a state vector
         self.action = action
-        if conj_action == 0:
+        if conj_action == None:
             # if no conj_action give, assume the operator is Hermitian
             self.conj_action = self.action
         else:
@@ -231,7 +231,7 @@ class qop:
             def new_action(ket_in):
                 return self.action(ket_in) * other
             def new_conj_action(ket_in):
-                return self.conj_action(ket_in) * other
+                return self.conj_action(ket_in) * cconj(other)
             qop_out = qop(new_action, new_conj_action)
             output = qop_out
         elif isinstance(other, (qop,)):
@@ -249,7 +249,7 @@ class qop:
         if isinstance(other, (int, float, complex)):
             # multiplication scalar * operator
             new_action = lambda ket_in : self.action(ket_in) * other
-            new_conj_action = lambda ket_in : self.conj_action(ket_in) * other
+            new_conj_action = lambda ket_in : self.conj_action(ket_in) * cconj(other)
             qop_out = qop(new_action, new_conj_action)
             output = qop_out
         else:
@@ -262,7 +262,7 @@ class qop:
         if isinstance(other, (int, float, complex)):
             # division of operator by a scalar
             new_action = lambda ket_in : self.action(ket_in) / other
-            new_conj_action = lambda ket_in : self.conj_action(ket_in) / other
+            new_conj_action = lambda ket_in : self.conj_action(ket_in) / cconj(other)
             qop_out = qop(new_action, new_conj_action)
             output = qop_out
         else:
