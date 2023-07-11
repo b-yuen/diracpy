@@ -10,9 +10,11 @@ from diracpy.states_operators import ket
 from diracpy.states_operators import bra
 from diracpy.states_operators import qop
 import numpy as np
+import time
 
 class qsys:
-    def __init__(self, hamiltonian_operator, **kwargs):
+    def __init__(self, hamiltonian_operator=None, H0terms=None, Vterms=None,
+                 jump_ops=None, n_int=0, initialstates=None, **kwargs):
         # hamiltonian operator should be of type dp.qop
         
         # key word arguments are: 
@@ -32,31 +34,88 @@ class qsys:
         # a system which decays at rate kappa via annihilation operator fock_subspace.a
         # the jump operator should be np.sqrt(kappa) * fock_subspace.a
         
-        if not isinstance(hamiltonian_operator, qop):
-            raise TypeError("qsys first positional argument should be of type diracpy.states_operators.qop")
-        self.ham_op = hamiltonian_operator
-        try:
-            self.jump_ops = list(kwargs.get('jump_ops', []))
-        except TypeError:
-            self.jump_ops = [ kwargs['jump_ops'] ]
-        if 'initialstates' in kwargs:
-            print('building hamiltonian...')
-            n_int = kwargs.get('n_int', 0)
-            self.build(kwargs['initialstates'], n_int)
-            print('built')
+        
+        self.n_int = n_int
+        self._input_hamiltonian(hamiltonian_operator, H0terms, Vterms)
+        self.jump_ops = self._input_jump_ops(jump_ops)
+        self.build_sys(initialstates)
         self.make_lindblads()
         
-    def build(self, initialstates, n_int):
+        # if not isinstance(hamiltonian_operator, qop):
+        #     raise TypeError("qsys first positional argument should be of type diracpy.states_operators.qop")
+        # self.ham_op = hamiltonian_operator
+        # try:
+        #     self.jump_ops = list(kwargs.get('jump_ops', []))
+        # except TypeError:
+        #     self.jump_ops = [ kwargs['jump_ops'] ]
+        # if 'initialstates' in kwargs:
+        #     print('building hamiltonian...')
+        #     self.build(kwargs['initialstates'])
+        #     print('built')
+        # self.make_lindblads()
+        
+    # returns empty list if no jump_op_in given, or a list of jump operators otherwise
+    def _input_jump_ops(self, jump_op_in):
+        if jump_op_in == None:
+            return []
+        else:
+            try:
+                return list(jump_op_in)
+            except:
+                return [jump_op_in]
+        
+    # Check at least on of input arguments hamiltonian_operator, H0terms or Vterms are populated.
+    # If populated check hamiltonian is a qop or H0terms and/or V0terms are list or array of qops.
+    def _input_hamiltonian(self, hamiltonian_operator, H0terms, Vterms):
+        if isinstance(hamiltonian_operator, qop):
+            self.ham_op = hamiltonian_operator
+            self.ham_array_flag = False
+        else:
+            self.H0terms = []
+            self.Vterms = []
+            if H0terms == None:
+                pass
+            elif isinstance(H0terms[0], qop):
+                self.H0terms = H0terms
+                self.ham_array_flag = True
+            else:
+                raise TypeError("H0terms should be a list or array of type diracpy.states_operators.qop")
+            if Vterms == None:
+                pass
+            elif isinstance(Vterms[0], qop):
+                self.Vterms = Vterms
+                self.ham_array_flag = True
+            else:
+                raise TypeError("Vterms should be a list or array of type diracpy.states_operators.qop")
+        try:
+            self.ham_array_flag
+        except:
+            NameError("No hamiltonian has been specified. At least one of hamiltonian_operator, H0terms or Vterms must be given.")
+            
+    def build_sys(self, initial_states):
+        # print(initial_states)
+        if initial_states == None:
+            raise NameError("System not built, no initial basis states given.")
+        else:
+            self._build(initial_states)
+        
+    def _build(self, initialstates):
         # build basis of coherent coupled states to order n_int
-        self.n_int = n_int
-        self.basis = [ket(state) for state in initialstates]
-        for _ in range(n_int):
-            new_states = []
-            for state in self.basis:
-                state_out = self.ham_op * state
-                state_out_components = [ket(component_state) for component_state in state_out.vec.keys()]
-                [new_states.append(new_state) for new_state in state_out_components if new_state not in self.basis]
-            self.basis += new_states
+        # self.n_int = n_int
+        # self.basis = [ket(state) for state in initialstates]
+        # for _ in range(n_int):
+        #     new_states = []
+        #     for state in self.basis:
+        #         state_out = self.ham_op * state
+        #         state_out_components = [ket(component_state) for component_state in state_out.vec.keys()]
+        #         [new_states.append(new_state) for new_state in state_out_components if new_state not in self.basis]
+        #     self.basis += new_states
+        # print("building...")
+        print("building sys basis...")
+        t1 = time.time()
+        
+        self.basis = self._build_coherent_sys(initialstates)
+        
         # add states these decay to
         if len(self.jump_ops) == 0:
             basis_incomplete = False
@@ -88,9 +147,73 @@ class qsys:
 #                [decayedbasis.append(state) for state in newbasisstates if state not in decayedbasis];
 #                basis += decayedbasis
         
+        t2 = time.time()
+        print("...system basis built in {} seconds".format(t2-t1))
+
         self.adjoint_basis = [bra(state) for state in self.basis]
         self.dim = len(self.basis)
-        self.hmatrix = self.matrix(self.ham_op)
+        print("defining hmatrix...")
+        t3 = time.time()
+        self.hmatrix = self.make_hmatrix()
+        t4 = time.time()
+        print("...hmatrix evaluated in {} seconds".format(t4-t3))
+        
+    # builds the basis states coherently coupled to initialstates via hamiltonian  
+    def _build_coherent_sys(self, initialstates):
+        # build sys when hamiltonian given via arrays H0terms and or Vterms
+        if self.ham_array_flag == True:
+            builder = self._build_from_ham_array
+        # build sys when hamiltonian given via single hamiltonian_operator
+        else:
+            builder = self._build_from_single_ham
+        return builder(initialstates)
+        
+    # This method more efficiently builds basis for extensive operators when given as H0terms and Vterms
+    # Builds basis states coherently coupled to initial states via operators in Vterms to order n_int
+    def _build_from_ham_array(self, initialstates):
+        basis = [ket(state) for state in initialstates]
+        for _ in range(self.n_int):
+            for Vop in self.Vterms:
+                new_states = []
+                for state in basis:
+                    state_out = Vop * state
+                    state_out_components = [ket(component_state) for component_state in state_out.vec.keys()]
+                    [new_states.append(new_state) for new_state in state_out_components if new_state not in basis]
+                basis += new_states
+        return basis
+            
+    # Build basis coherently coupled to initial states via hamiltonian_operator to order n_int.
+    def _build_from_single_ham(self, initialstates):
+        basis = [ket(state) for state in initialstates]
+        for _ in range(self.n_int):
+            new_states = []
+            for state in basis:
+                state_out = self.ham_op * state
+                state_out_components = [ket(component_state) for component_state in state_out.vec.keys()]
+                [new_states.append(new_state) for new_state in state_out_components if new_state not in basis]
+            basis += new_states
+        return basis
+    
+    def make_hmatrix(self):
+        if self.ham_array_flag == True:
+            matrix_evaluator = self._hmatrix_from_ham_array
+        else:
+            matrix_evaluator = self._hmatrix_from_ham_op
+        return matrix_evaluator()
+            
+    def _hmatrix_from_ham_array(self):
+        hmatrix = np.zeros([self.dim, self.dim], complex)
+        for term_op in self.H0terms:
+            term_matrix = self.matrix(term_op)
+            hmatrix += term_matrix
+        for term_op in self.Vterms:
+            term_matrix = self.matrix(term_op)
+            hmatrix += term_matrix
+        return hmatrix
+    
+    def _hmatrix_from_ham_op(self):
+        hmatrix = self.matrix(self.ham_op)
+        return hmatrix
             
     def matrix(self, operator):
         if not isinstance(operator, qop):
