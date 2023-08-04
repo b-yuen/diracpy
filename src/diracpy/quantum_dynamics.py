@@ -236,11 +236,27 @@ class unitaryevolution:
     # times is linearly spaced numpy array of times for which the system is solved for
     # This class is used to solve the dynamics for a static Hamiltonian. It uses the 
     # the Hamiltonian function (of time) in the ham_obj, evaluated at time zero.
-    def __init__(self, z0, times, ham_obj):
+    def __init__(self, z0, times, ham_obj_or_matrix):
         
         self.t = times
         self.z = z0
-        self.ham = ham_obj
+        # self.ham = ham_obj
+        # self.dim = self.ham.dim
+        # self.hmatrix = self.ham.ham(0)
+        self._get_ham(ham_obj_or_matrix)
+        
+    def _get_ham(self, ham_in):
+        if type(ham_in) == np.ndarray:
+            _get = self._get_hmatrix
+        else:
+            _get = self._get_ham_obj
+        return _get(ham_in)
+    
+    def _get_hmatrix(self, ham_in):
+        self.hmatrix = ham_in
+        self.dim = len(ham_in)
+        
+    def _get_ham_obj(self, ham_in):
         self.dim = self.ham.dim
         self.hmatrix = self.ham.ham(0)
         
