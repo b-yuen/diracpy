@@ -38,7 +38,7 @@ class qsys:
         self.n_int = n_int
         self._input_hamiltonian(hamiltonian_operator, H0terms, Vterms)
         self.jump_ops = self._input_jump_ops(jump_ops)
-        self.build_sys(initialstates)
+        self.build_sys(initialstates, **kwargs)
         self.make_lindblads()
         
         # if not isinstance(hamiltonian_operator, qop):
@@ -92,14 +92,14 @@ class qsys:
         except:
             NameError("No hamiltonian has been specified. At least one of hamiltonian_operator, H0terms or Vterms must be given.")
             
-    def build_sys(self, initial_states):
+    def build_sys(self, initial_states, **kwargs):
         # print(initial_states)
         if initial_states == None:
             raise NameError("System not built, no initial basis states given.")
         else:
-            self._build(initial_states)
+            self._build(initial_states, **kwargs)
         
-    def _build(self, initialstates):
+    def _build(self, initialstates, build_hmatrix=True):
         # build basis of coherent coupled states to order n_int
         # self.n_int = n_int
         # self.basis = [ket(state) for state in initialstates]
@@ -152,11 +152,13 @@ class qsys:
 
         self.adjoint_basis = [bra(state) for state in self.basis]
         self.dim = len(self.basis)
-        print("defining hmatrix...")
-        t3 = time.time()
-        self.hmatrix = self.make_hmatrix()
-        t4 = time.time()
-        print("...hmatrix evaluated in {} seconds".format(t4-t3))
+        if build_hmatrix==True:
+            print("defining hmatrix...")
+            t3 = time.time()
+            # self.hmatrix = self.make_hmatrix()
+            self.make_hmatrix()
+            t4 = time.time()
+            print("...hmatrix evaluated in {} seconds".format(t4-t3))
         
     # builds the basis states coherently coupled to initialstates via hamiltonian  
     def _build_coherent_sys(self, initialstates):
@@ -199,7 +201,12 @@ class qsys:
             matrix_evaluator = self._hmatrix_from_ham_array
         else:
             matrix_evaluator = self._hmatrix_from_ham_op
-        return matrix_evaluator()
+        self.hmatrix = matrix_evaluator()
+        # return matrix_evaluator()
+        
+    def _hmatrix_from_ham_op(self):
+        hmatrix = self.matrix(self.ham_op)
+        return hmatrix
             
     def _hmatrix_from_ham_array(self):
         hmatrix = np.zeros([self.dim, self.dim], complex)
@@ -210,20 +217,15 @@ class qsys:
             term_matrix = self.matrix(term_op)
             hmatrix += term_matrix
         return hmatrix
-    
-    def _hmatrix_from_ham_op(self):
-        hmatrix = self.matrix(self.ham_op)
-        return hmatrix
             
     def matrix(self, operator):
         if not isinstance(operator, qop):
             raise TypeError("first positional argument should be of type diracpy.states_operators.qop")
         matrix_out = np.zeros([self.dim, self.dim], complex)
-        for i, basis_bra in enumerate(self.adjoint_basis):
-            _brapsi = basis_bra * operator
-            for j, basis_ket in enumerate(self.basis):
-                # matrix_out[i,j] = basis_bra * operator * basis_ket
-                matrix_out[i,j] = _brapsi * basis_ket
+        for j, basis_ket in enumerate(self.basis):
+            _psi = operator * basis_ket
+            for i, basis_bra in enumerate(self.adjoint_basis):
+                matrix_out[i,j] = basis_bra * _psi
         return matrix_out
     
     def print_basis(self):

@@ -614,7 +614,73 @@ class quantumjumps(schrodint):
             n2 += abs(c)**2
         return n2
             
+'''
+Solves a systme with a non-Hermitian (also works for Hermitian) Hamiltonian
+by applying a similarity transformation to the state vector psi into a basis
+where the Hamiltonian is diagonal.
+
+input psi0 is the state vector at t=0.
+
+Note this may not work in all cases since non-Hermitian matrices are not
+always diagonalizeable. This may be the case when eigenvalues of the 
+non-Hermitian matrix are degenerate - further work on this is needed and no
+checks on the Hamiltonian matrix are made.
+'''
+class non_hermitian_unitaryevolution:
+    def __init__(self, psi0, times, ham_obj_or_matrix):
         
+        self.t = times
+        self.psi0 = psi0
+        # self.ham = ham_obj
+        # self.dim = self.ham.dim
+        # self.hmatrix = self.ham.ham(0)
+        self._get_ham(ham_obj_or_matrix)
+        
+    def _get_ham(self, ham_in):
+        if type(ham_in) == np.ndarray:
+            _get = self._get_hmatrix
+        else:
+            _get = self._get_ham_obj
+        return _get(ham_in)
+    
+    def _get_hmatrix(self, ham_in):
+        self.hmatrix = ham_in
+        self.dim = len(ham_in)
+        
+    def _get_ham_obj(self, ham_in):
+        self.dim = ham_in.dim
+        self.hmatrix = ham_in.ham(0)
+        
+    def eigensolve(self):
+        self.evals, self.evecs = np.linalg.eig(self.hmatrix)
+        # hhbar = self.hmatrix @ np.conj(self.hmatrix)
+        # self.evals, self.evecs = np.linalg.eig(hhbar)
+        # self.evals = np.sqrt(self.evals)
+        
+    def u_op(self, t):
+        u = np.zeros([self.dim, self.dim], complex)
+        for i in range(self.dim):
+            u[i,i] = np.exp(-1.j * self.evals[i] * t)
+        # u = self.hc(self.evecs) @ u @ self.evecs
+        # u = self.evecs @ u @ self.hc(self.evecs)
+        s = np.transpose(self.evecs)
+        si = np.linalg.inv(s)
+        u = si @ u @ s
+        return u
+        
+    def hc(self, np2darray):
+        return np.transpose(np.conj(np2darray))
+    
+    def solve(self):
+        self.eigensolve()
+        dt = self.t[1] - self.t[0]
+        num_t = np.size(self.t)
+        u_dt = self.u_op(dt)
+        self.soln = np.zeros([num_t, self.dim], complex)
+        psi = self.psi0
+        for i, t in enumerate(self.t):
+            self.soln[i] = psi
+            psi = u_dt @ psi
         
             
         
