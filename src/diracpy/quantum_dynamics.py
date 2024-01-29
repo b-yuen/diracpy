@@ -257,8 +257,8 @@ class unitaryevolution:
         self.dim = len(ham_in)
         
     def _get_ham_obj(self, ham_in):
-        self.dim = self.ham.dim
-        self.hmatrix = self.ham.ham(0)
+        self.dim = ham_in.dim
+        self.hmatrix = ham_in.ham(0)
         
     def eigensolve(self):
         self.evals, self.evecs = np.linalg.eigh(self.hmatrix)
