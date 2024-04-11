@@ -16,7 +16,7 @@ class qsys:
     def __init__(self, hamiltonian_operator=None, H0terms=None, Vterms=None,
                  jump_ops=None, n_int=0, initialstates=None, **kwargs):
         # hamiltonian operator should be of type dp.qop
-        
+        #comment
         # key word arguments are: 
         #
         # 'initialstates', a list of initial states from which to form a basis
