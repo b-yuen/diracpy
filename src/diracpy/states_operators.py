@@ -268,7 +268,8 @@ class qop:
         else:
             output = NotImplemented
         return output
-    
+
+    # test comment
     def __add__(self, other):
         if isinstance(other, qop):
             # Addition of two operators
