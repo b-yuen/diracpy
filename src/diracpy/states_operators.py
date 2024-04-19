@@ -78,6 +78,9 @@ class qvec:
             output = self.type+'[]'
         return output
     
+    def __neg__(self):
+        return self.__mul__(-1)
+    
     def __mul__(self, scalar):
         if isinstance(scalar, (int, float, complex)):
             if scalar == 0:
@@ -123,6 +126,22 @@ class qvec:
     
     def __radd__(self, other):
         return self.__add__(other)
+    
+    def __sub__(self, other):
+        if type(self) == type(other):
+            new_qvec = self.copy()
+            for other_bstate in other.vec:
+                try:
+                    new_qvec.vec[other_bstate] -= other.vec[other_bstate]
+                except KeyError:
+                    new_qvec.vec[other_bstate] = -other.vec[other_bstate]
+                if new_qvec.vec[other_bstate] == 0:
+                    new_qvec.vec.pop(other_bstate)
+            output = new_qvec
+        else:
+            output = NotImplemented
+        return output
+        
     
     def __eq__(self, other):
         bool_out = (self.type == other.type and self.vec == other.vec)
