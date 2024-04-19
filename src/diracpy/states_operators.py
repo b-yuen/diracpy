@@ -61,18 +61,21 @@ class qvec:
         if self.vec:
             [print(value, ' * ', self.type, key) for key, value in self.vec.items()]
         else:
-            print('')
+            print(self.type+'[]')
             
     def __str__(self):
         output = ''
-        for state, cnum in self.vec.items():
-            if cnum == 0:
-                pass
-            elif cnum == 1:
-                output += self.type + str(list(state)) + ' + '
-            else:
-                output += str(cnum) + ' * ' + self.type + str(list(state)) + ' + '
-        output = output[:-3]
+        if self.vec:
+            for state, cnum in self.vec.items():
+                if cnum == 0:
+                    pass
+                elif cnum == 1:
+                    output += self.type + str(list(state)) + ' + '
+                else:
+                    output += str(cnum) + ' * ' + self.type + str(list(state)) + ' + '
+            output = output[:-3]
+        else:
+            output = self.type+'[]'
         return output
     
     def __mul__(self, scalar):
@@ -111,6 +114,8 @@ class qvec:
                     new_qvec.vec[other_bstate] += other.vec[other_bstate]
                 except KeyError:
                     new_qvec.vec[other_bstate] = other.vec[other_bstate]
+                if new_qvec.vec[other_bstate] == 0:
+                    new_qvec.vec.pop(other_bstate)
             output = new_qvec
         else:
             output = NotImplemented
@@ -133,12 +138,13 @@ class ket(qvec):
     
     def __mul__(self, other):
         if isinstance(other, (int, float, complex)):
-            if other == 0:
-                output = self.new_instance()
-            else:
-                basisstates = [state for state in self.vec]
-                cnums = [other * cnum for cnum in self.vec.values()]
-                output = self.new_instance(basisstate = basisstates, cnum = cnums)
+            output = super().__mul__(other)
+            # if other == 0:
+            #     output = self.new_instance()
+            # else:
+            #     basisstates = [state for state in self.vec]
+            #     cnums = [other * cnum for cnum in self.vec.values()]
+            #     output = self.new_instance(basisstate = basisstates, cnum = cnums)
         elif isinstance(other, bra):
             # outer product between a ket and a bra
             action = lambda ket_in : (other * ket_in) * self
