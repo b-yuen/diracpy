@@ -306,6 +306,21 @@ class qop:
             output = NotImplemented
         return output
     
+    def __sub__(self, other):
+        if isinstance(other, qop):
+            # Addition of two operators
+            new_action = lambda ket_in : self.action(ket_in) - other.action(ket_in)
+            new_conj_action = lambda ket_in : self.conj_action(ket_in) - other.conj_action(ket_in)
+            qop_out = qop(new_action, new_conj_action)
+            output = qop_out
+        else:
+            # Only two operators may be added. All other types not implemented
+            output = NotImplemented
+        return output
+    
+    def __neg__(self):
+        return self.__mul__(-1)
+    
     def conj(self):
         # Hermitian conjugation
         conj_op = qop(self.conj_action, self.action)
