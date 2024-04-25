@@ -100,7 +100,7 @@ class qvec:
             output = NotImplemented
         return output
     
-    def __div__(self, scalar):
+    def __truediv__(self, scalar):
         if isinstance(scalar,(int, float, complex)):
             basisstates = [state for state in self.vec]
             cnums = [cnum / scalar for cnum in self.vec.values()]
@@ -283,7 +283,7 @@ class qop:
             output = NotImplemented
         return output
     
-    def __div__(self, other):
+    def __truediv__(self, other):
         if isinstance(other, (int, float, complex)):
             # division of operator by a scalar
             new_action = lambda ket_in : self.action(ket_in) / other
