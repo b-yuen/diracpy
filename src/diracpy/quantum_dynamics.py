@@ -229,7 +229,70 @@ class lindbladint:
                     csoln[i, j, k] = realsoln[i, 2*j, 2*k] + 1.j * realsoln[i, 2*j, 2*k+1]            
         return csoln
     
+       
+class liouville:
 
+    # z0 is the initial state of the system described by its density matrix.
+    # z0 is represented by a 2d complex numpy array with the dimensions of the Hamiltonian
+    # times is linearly spaced numpy array of times for which the system is solved for
+    # This class is used to solve the dynamics for an open quantum system using the Liouvillian.
+    # Note; to quickly access the steady state times can be a array of shape (2,) with a large final time 
+    # as the evolution is 
+
+    
+    def __init__(self, z0, times, ham_obj):
+        self.t = times
+        self.z = z0 
+        self.ham = ham_obj
+        self.dim = self.ham.dim
+        self.identity = np.identity(self.dim)
+        self.flsize = self.dim**2
+        self.vz = z0.T.reshape(z0.size)
+        self.liouvillian = self.generate_liouvillian()
+        
+    def lindblad_sop(self):
+        '''converts dissipative part of master equation into superoperator'''
+        lindbladsop = np.zeros((self.ham.hmatrix.size, self.ham.hmatrix.size), complex)
+        for i in self.ham.lindbladgamma:
+            gamma = self.ham.lindbladgamma[i]
+            lbr = self.ham.lindbladraising[i]
+            lbl = self.ham.lindbladlowering[i]
+            lindbladsop += gamma*(np.kron(lbl.conj(), lbl) - 0.5*np.kron(self.identity, lbr@lbl) - 0.5*np.kron((lbr@lbl).T, self.identity))
+        return lindbladsop
+    
+    def system_sop(self):
+        '''converts unitary part of master equation into superoperator'''
+        return -1j*(np.kron(self.identity, self.ham.hmatrix) - np.kron(self.ham.hmatrix.T, self.identity))
+        
+    def generate_liouvillian(self):
+        '''returns the liouvillian superoperator'''
+        return self.system_sop() + self.lindblad_sop()
+    
+    def eigensolve(self):
+        '''returns liouvillian eigenvalues and eigevectors'''
+        self.evals, self.levecs, self.revecs = scipy.linalg.eig(self.liouvillian, right = True, left = True)
+              
+    def expL_op(self, t):
+        L = np.zeros([self.dim**2, self.dim**2], complex)
+        for i in range(self.dim**2):
+            L[i,i] = np.exp(self.evals[i]*t)
+        L = self.revecs @ L @ np.linalg.inv(self.revecs)
+        return L
+    
+    def solve(self):
+        '''calculates time evolution of z0 using liouvillian'''
+        self.eigensolve()
+        dt = self.t[1] - self.t[0]
+        num_t = np.size(self.t)
+        self.soln = np.zeros([num_t, self.dim, self.dim], complex)
+        if np.linalg.det(self.revecs) == 0:
+            print('The Liouvillian does not have linearly independent right eigenvectors: L is not diagonalisable')
+        else: 
+            for i, t in enumerate(self.t):
+                self.soln[i] = self.vz.reshape((self.dim, self.dim)).T
+                self.vz = self.expL_op(dt)@self.vz     
+    
+    
 # test comment    
 class unitaryevolution:
     # z0 is the initial state of the system described by its density matrix.
