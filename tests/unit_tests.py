@@ -292,7 +292,7 @@ class unittest_innerproduct(unittest_base):
         
     def sym_test(self):
         LHS = self.bra_u*self.ket_v
-        RHS = self.ket_u*self.bra_v
+        RHS = self.bra_v*self.ket_u
         if LHS == RHS:
             return True, "Pass"
         else:
