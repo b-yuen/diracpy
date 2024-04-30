@@ -7,9 +7,6 @@ Created on Tue Feb 15 15:33:45 2022
 """
 
 # Still To implement
-# operator subtraction
-# state subtraction
-# superposition of qvecs formed using qvec or derived classes
 # problem pickling __add__(), probably due to lambda functions.
 # partial contraction of bras/kets with kets/bras of a factor space
 
@@ -17,16 +14,79 @@ from numpy import conj as cconj
 from copy import deepcopy
 #from diracpy.operators import qop
 
-# need to include scalar division in qvec and qop
 
 class qvec:
+    """
+    Parent class to define general properties of bra and ket vectors
+    
+    This class defines attributes and methods common to both types of vectors.
+    The bra and ket classes below are child classes of qvec.
+    
+    Attributes
+    ----------
+    type : str
+        a string that will be either 'bra' or 'ket' in child classes
+        (default '')
+    vec : dict
+        a dictionary whose keys are a list of basis state indices and values
+        are the complex scalar coefficients of each basis state (default {}).
+        The qvec represents the linear superposition of these basis states
+        using the coefficients given here.
+        
+    Methods
+    -------
+    new_instance(basisstate=None, cnum=1)
+        returns a new qvec object
+    copy()
+        returns a deepcopy of the qvec object
+    c(basistate)
+        gives the coefficient of the given basis state for this qvec
+    update(basisstate, cnum=1)
+        updates the coefficent of the given basis state for this qvec
+    print()
+        prints each component of the qvec
+    __str__()
+        defines output of str(qvec) and print(qvec)
+    __neg__()
+        defines negation of a qvec
+    __mul__(scalar)
+        defines scalar multiplication of a qvec
+    __rmul__(scalar)
+        defines multiplication by a scalar from the right
+    __truediv__(scalar)
+        defines scalar devision
+    __add__(other) 
+        defines addition qvec addition from left
+    __radd__(other)
+        defines addition qvec addition from the right
+    __sub__(other)
+        defines subtraction of qvecs
+    __eq__(other)
+        defines equality qvecs
+    """
+    
     def __init__(self, basisstate = None, cnum=1, **kwargs):
-#        if kwargs.get('vector_type') == 'bra':
-#            self.type = 'bra'
-#        else:
-#            self.type = 'ket'
+        # **kwargs should go - but need to test with unit_tests.py first
+        """
+        Parameters
+        ----------
+        basisstate : list, tuple, string or a qvec, optional
+            An iterable that gives the state index values of a basis state. 
+            The default is None which yields the zero qvec. If type str given
+            then state indices are each character.
+        cnum : int, float or complex, optional
+            The scalar multiple of the given basis state. The default is 1.
+        **kwargs : dict, optional
+            Extra arguments to qvec.
+
+        Returns
+        -------
+        None.
+        """
+        
         self.type = ''
         self.vec = {}
+        # populate vec with basis states and cnum's
         try:
             # when basisstate is already a qvec, ket or bra
             self.vec = basisstate.vec
@@ -42,12 +102,54 @@ class qvec:
                     self.vec[ tuple( basisstate )] = cnum
                 
     def new_instance(self, basisstate = None, cnum=1):
+        """
+        Creates a new qvec with for the basis state given by basistate and
+        the cnum specified.
+        
+        If non basis state is given then this produces the zero qvec.
+        
+        Parameters
+        ----------
+        basisstate : list, tuple, str or qvec, optional
+            The index values for the basis state, or a qvec. 
+            The default is None.
+        cnum : int, float, complex, optional
+            The scalar multiplier of the given basis state. The default is 1.
+
+        Returns
+        -------
+        qvec
+            new qvec.
+        """
+        
         return qvec(basisstate, cnum)
             
     def copy(self):
+        """
+        Returns
+        -------
+        qvec
+            copy of self.
+        """
+        
         return deepcopy(self)
     
     def c(self, basisstate):
+        """
+        gets coefficient of specified basistate from the qvec object.
+        If the basisstate is not in the qvec then zero is returned.
+
+        Parameters
+        ----------
+        basisstate : list, tuple, string
+            index values of the basisstate to get coefficient of.
+
+        Returns
+        -------
+        coefficient : int, float or complex
+            The coefficient of specified basistate
+        """
+        
         try:
             coefficient = self.vec[tuple(basisstate)]
         except KeyError:
@@ -55,15 +157,49 @@ class qvec:
         return coefficient
     
     def update(self, basisstate, cnum=1):
+        """
+        update the cnum for specified basistate with coefficient cnum.
+
+        Parameters
+        ----------
+        basisstate : int, list, or tuple
+            index values of basisstate.
+        cnum : int, float or complex, optional
+            Replacement coefficient value. The default is 1.
+
+        Returns
+        -------
+        None.
+        """
+        
         self.vec[tuple(basisstate)] = cnum
         
     def print(self):
+        """
+        prints qvec coefficients and basisstates
+
+        Returns
+        -------
+        None.
+        """
+        
         if self.vec:
             [print(value, ' * ', self.type, key) for key, value in self.vec.items()]
         else:
             print(self.type+'[]')
             
     def __str__(self):
+        """
+        str method for qvecs
+
+        Returns
+        -------
+        output : str
+            returns string in format 
+            cnum1 * basisstate1 + cnum2 * basisstate2 ...
+
+        """
+        
         output = ''
         if self.vec:
             for state, cnum in self.vec.items():
@@ -79,9 +215,33 @@ class qvec:
         return output
     
     def __neg__(self):
+        """
+        negation operator method
+
+        Returns
+        -------
+        qvec
+            -1 * self.
+
+        """
         return self.__mul__(-1)
     
     def __mul__(self, scalar):
+        """
+        multiplication of qvecs from left by a scalar, scalar * qvec.
+        multiplies all basisstates coefficients of this qvec by the scalar
+
+        Parameters
+        ----------
+        scalar : int, float, or complex
+            multiplier.
+
+        Returns
+        -------
+        output : qvec
+            multiplied qvec.
+        """
+        
         if isinstance(scalar, (int, float, complex)):
             if scalar == 0:
                 output = self.new_instance()
@@ -94,6 +254,20 @@ class qvec:
         return output
     
     def __rmul__(self, scalar):
+        """
+        multiplication of qvecs from the right, qvec * scalar.
+
+        Parameters
+        ----------
+        scalar : int, float or complex
+            multiplier.
+
+        Returns
+        -------
+        output : qvec
+            right multiplied qvec.
+        """
+        
         if isinstance(scalar, (int, float, complex)):
             output = self.__mul__(scalar)
         else:
@@ -101,6 +275,21 @@ class qvec:
         return output
     
     def __truediv__(self, scalar):
+        """
+        Division operator for qvec / scalar. Divides each basisstate
+        coefficient by the scalar.
+
+        Parameters
+        ----------
+        scalar : int, float, or complex
+            divisor.
+
+        Returns
+        -------
+        output : qvec
+            divided qvec.
+        """
+        
         if isinstance(scalar,(int, float, complex)):
             basisstates = [state for state in self.vec]
             cnums = [cnum / scalar for cnum in self.vec.values()]
@@ -110,6 +299,20 @@ class qvec:
         return output
     
     def __add__(self, other):
+        """
+        Addition operator to adds a qvec to another qvec of the same type.
+
+        Parameters
+        ----------
+        other : qvec
+            must be of same type, e.g. bra or ket.
+
+        Returns
+        -------
+        output : qvec
+            qvec of same type.
+        """
+        
         if type(self) == type(other):
             new_qvec = self.copy()
             for other_bstate in other.vec:
@@ -125,9 +328,37 @@ class qvec:
         return output
     
     def __radd__(self, other):
+        """
+        Right addition operator for qvecs
+
+        Parameters
+        ----------
+        other : qvec
+            A qvec as same type.
+
+        Returns
+        -------
+        qvec
+            A qvec of same type.
+
+        """
         return self.__add__(other)
     
     def __sub__(self, other):
+        """
+        subtraction operators for two qvecs of the same type
+
+        Parameters
+        ----------
+        other : qvec
+            qvec of same type.
+
+        Returns
+        -------
+        output : qvec
+            qvec of same type.
+        """
+        
         if type(self) == type(other):
             new_qvec = self.copy()
             for other_bstate in other.vec:
@@ -142,8 +373,22 @@ class qvec:
             output = NotImplemented
         return output
         
-    
     def __eq__(self, other):
+        """
+        equality operator for two vectors of the same type, i.e. qvec1 == qvec2
+        Compares basisstate coefficients to see if qvecs are equal
+
+        Parameters
+        ----------
+        other : qvec
+            qvec of same type.
+
+        Returns
+        -------
+        bool_out : bool
+            True if qvec vec dictionaries are equal.
+        """
+        
         bool_out = (self.type == other.type and self.vec == other.vec)
         return bool_out
 
