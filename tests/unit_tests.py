@@ -101,7 +101,7 @@ class unittest_base_vector(unittest_base):
     
 class unittest_vector(unittest_base_vector):
     
-    def unit_test(self, end_test = False):
+    def unit_test_vec(self, end_test = False):
         com_result, com_message = self.com_test()
         asoc_result, asoc_message = self.asoc_test()
         id_result, id_message = self.id_test()
@@ -237,7 +237,7 @@ class unittest_innerproduct(unittest_base):
         self.bra_v = (1 + 2**(0.5)) * dp.bra([6]) - 4*1j * dp.bra([7])
         self.ket_v = (1 + 2**(0.5)) * dp.ket([6]) + 4*1j * dp.ket([7])
     
-    def unit_test(self, end_test = False):
+    def unit_test_ip(self, end_test = False):
         zero_r,zero_m = self.zero_prod()
         norm_r,norm_m = self.norm_test()
         ortho_r, ortho_m = self.ortho_test()
@@ -253,7 +253,7 @@ class unittest_innerproduct(unittest_base):
         total_m = np.array([ zero_m, norm_m, ortho_m, sym_m, add_ax_m, add_form_m,sca_mul_lef_m,
                    sca_mul_rig_m, mult_sp_m])
         if np.prod(total_r):
-            return True, "All Vector Space Tests Passed"
+            return True, "All Inner Product Tests Passed"
         else:
             if not end_test:
                 return False, total_m[np.invert(total_r)]
@@ -378,13 +378,40 @@ class unittest_qop(unittest_base):
         self.sig_p = atom.sigma_plus
         self.sig_m = atom.sigma_minus
     
-    def unit_test(self, end_test = False):
+    def unit_test_qop(self, end_test = False):
         Focka_r, Focka_m = self.Fock_a_op_test()
         Fockadag_r, Fockadag_m = self.Fock_adag_op_test()
         TwoLevelsp_r, TwoLevelsp_m = self.Two_Level_sp_op_test()
         TwoLevelsm_r, TwoLevelsm_m = self.Two_Level_sm_op_test()
         #Floqet1_r, Floqet1_m = self.Floquet_1_op_test()
         
+        Conj_a_r, Conj_a_m = self.Conjugate_a_Test()
+        Conj_adag_r, Conj_adag_m = self.Conjugate_adag_Test()
+        Conj_sp_r, Conj_sp_m = self.Conjugate_sp_Test()
+        Conj_sm_r, Conj_sm_m = self.Conjugate_sm_Test()
+        #Conj_Floqet1_r, Conj_Floqet1_m = self.Floqet_conj_test()
+        
+        Sca_mul_r,Sca_mul_m = self.Scalar_mult_op_test()
+        Sca_div_r,Sca_div_m = self.Scalar_div_op_test()
+        Op_add_r, Op_add_m  = self.Op_add_test()
+        Op_minus_r, Op_minus_m  = self.Op_minus_test()
+        Op_Same_mul_r, Op_Same_mul_m  = self.Op_Same_Mul_test()
+        Op_Diff_mul_r, Op_Diff_mul_m  = self.Op_Diff_Mul_test()
+        
+        total_r = [Focka_r, Fockadag_r, TwoLevelsp_r, TwoLevelsm_r, 
+                   Conj_a_r, Conj_adag_r, Conj_sp_r, Conj_sm_r,
+                   Sca_mul_r, Sca_div_r, Op_add_r, Op_minus_r, Op_Same_mul_r, Op_Diff_mul_r]
+        total_m = np.array([Focka_m, Fockadag_m, TwoLevelsp_m, TwoLevelsm_m, 
+                   Conj_a_m, Conj_adag_m, Conj_sp_m, Conj_sm_m,
+                   Sca_mul_m, Sca_div_m, Op_add_m, Op_minus_m, Op_Same_mul_m, Op_Diff_mul_m])
+        if np.prod(total_r):
+            return True, "All QOP Tests Passed"
+        else:
+            if not end_test:
+                return False, total_m[np.invert(total_r)]
+            else:
+                output = total_m[np.invert(total_r)].tolist()
+                print(*output, sep="\n")
         
     def Fock_a_op_test(self):
         op = self.a
@@ -398,6 +425,8 @@ class unittest_qop(unittest_base):
         
         if bra*ket:
             return True, "Pass"
+        elif bra == ket:
+            return False, "Fock Space 'a' Operators Act incorrectly on both bra and ket: Fail"
         elif not ket:
             return False, "Fock Space 'a' Operators Acting on Ket: Fail"
         elif not bra:
@@ -415,6 +444,8 @@ class unittest_qop(unittest_base):
         
         if bra*ket:
             return True, "Pass"
+        elif bra == ket:
+            return False, "Fock Space 'a dagger' Operators Act incorrectly on both bra and ket: Fail"
         elif not ket:
             return False, "Fock Space 'a dagger' Operators Acting on Ket: Fail"
         elif not bra:
@@ -432,6 +463,8 @@ class unittest_qop(unittest_base):
         
         if bra*ket:
             return True, "Pass"
+        elif bra == ket:
+            return False, "Two Level 'sigma plus' Operators Act incorrectly on both bra and ket: Fail"
         elif not ket:
             return False, "Two Level 'sigma plus' Operators Acting on Ket: Fail"
         elif not bra:
@@ -449,12 +482,171 @@ class unittest_qop(unittest_base):
         
         if bra*ket:
             return True, "Pass"
+        elif bra == ket:
+            return False, "Two Level 'sigma minus' Operators Act incorrectly on both bra and ket: Fail"
         elif not ket:
-            return False, "Two Level 'sigma plus' Operators Acting on Ket: Fail"
+            return False, "Two Level 'sigma minus' Operators Acting on Ket: Fail"
         elif not bra:
-            return False, "Two Level 'sigma plus' Operators Acting on Bra: Fail"
+            return False, "Two Level 'sigma minus' Operators Acting on Bra: Fail"
     
     def Floquet_1_op_test(self):
         #NOT IMPLEMENTED
         pass
+    
+    def Conjugate_a_Test(self):
+        op = self.a
+        conjop = self.adag
+        LHS = op.conj() * dp.ket([2])
+        RHS = conjop * dp.ket([2])
+        if LHS == RHS:
+            return True, "Pass"
+        else:
+            return False, "The Conjugate of 'a' is not 'a dagger': Fail"
+    
+    def Conjugate_adag_Test(self):
+        op = self.adag
+        conjop = self.a
+        LHS = op.conj() * dp.ket([2])
+        RHS = conjop * dp.ket([2])
+        if LHS == RHS:
+            return True, "Pass"
+        else:
+            return False, "The Conjugate of 'a' is not 'a dagger': Fail"
+    
+    def Conjugate_sp_Test(self):
+        op = self.sig_p
+        conjop = self.sig_m
+        LHS = op.conj() * dp.ket([2,'e'])
+        RHS = conjop * dp.ket([2,'e'])
+        if LHS == RHS:
+            return True, "Pass"
+        else:
+            return False, "The Conjugate of 'sigma plus' is not 'sigma minus': Fail"
+    
+    def Conjugate_sm_Test(self):
+        op = self.sig_m
+        conjop = self.sig_p
+        LHS = op.conj() * dp.ket([2,'g'])
+        RHS = conjop * dp.ket([2,'g'])
+        if LHS == RHS:
+            return True, "Pass"
+        else:
+            return False, "The Conjugate of 'sigma minus' is Not 'sigma plus': Fail"
+        
+    def Floqet_conj_test(self):
+        #NOT IMPLEMENTED
+        pass
+    
+    def Scalar_mult_op_test(self):
+        ket = dp.ket([1,'g'])
+        LHS_a = (4* self.a) * ket
+        RHS_a = 4 * ( self.a * ket)
+        a_result = LHS_a == RHS_a
+        
+        LHS_sp = (4 * self.sig_p) * ket
+        RHS_sp = 4 * (self.sig_p * ket)
+        sp_result = LHS_sp == RHS_sp
+        
+        if a_result*sp_result:
+            return True, "Pass"
+        elif a_result == sp_result:
+            return False, "Scalar Multiplacation Works For Neither 'a' nor 'sigma plus': Fail"
+        elif not a_result:
+            return False, "Scalar Multiplication Doesn't Work for 'a': Fail"
+        elif not sp_result:
+            return False, "Scalar Multiplication Doesn't Work for 'sigma plus': Fail"
+        
+    def Scalar_div_op_test(self):
+        ket = dp.ket([1,'g'])
+        LHS_a = (self.a / 4) * ket
+        RHS_a = ( self.a * ket) / 4
+        a_result = LHS_a == RHS_a
+        
+        LHS_sp = (self.sig_p / 4) * ket
+        RHS_sp =(self.sig_p * ket)/4 
+        sp_result = LHS_sp == RHS_sp
+        
+        if a_result*sp_result:
+            return True, "Pass"
+        elif a_result == sp_result:
+            return False, "Scalar Division Works For Neither 'a' Nor 'sigma plus': Fail"
+        elif not a_result:
+            return False, "Scalar Division Doesn't Work for 'a': Fail"
+        elif not sp_result:
+            return False, "Scalar Division Doesn't Work for 'sigma plus': Fail"
+    
+    def Op_add_test(self):
+        ket = dp.ket([1,'g'])
+        LHS_a = (self.a + self.a) * ket
+        RHS_a = self.a * ket - self.a * ket
+        a_result = LHS_a == RHS_a
+        
+        LHS_sp = (self.sig_p + self.sig_p) * ket
+        RHS_sp = self.sig_p * ket + self.sig_p * ket
+        sp_result = LHS_sp == RHS_sp
+        
+        if a_result*sp_result:
+            return True, "Pass"
+        elif a_result == sp_result:
+            return False, "Operator Addition Works For Neither 'a' Nor 'sigma plus': Fail"
+        elif not a_result:
+            return False, "Operator Addition Doesn't Work for 'a': Fail"
+        elif not sp_result:
+            return False, "Operator Addition Doesn't Work for 'sigma plus': Fail"
+    
+    def Op_minus_test(self):
+        ket = dp.ket([1,'g'])
+        LHS_a = (self.a - self.a) * ket
+        RHS_a = self.a * ket - self.a * ket
+        a_result = LHS_a == RHS_a
+        
+        LHS_sp = (self.sig_p - self.sig_p) * ket
+        RHS_sp = self.sig_p * ket - self.sig_p * ket
+        sp_result = LHS_sp == RHS_sp
+        
+        if a_result*sp_result:
+            return True, "Pass"
+        elif a_result == sp_result:
+            return False, "Operator Subtraction Works For Neither 'a' Nor 'sigma plus': Fail"
+        elif not a_result:
+            return False, "Operator Subtraction Doesn't Work for 'a': Fail"
+        elif not sp_result:
+            return False, "Operator Subtraction Doesn't Work for 'sigma plus': Fail"
+    
+    def Op_Diff_Mul_test(self):
+        LHS = self.a * self.sp* dp.ket([1,'g'])
+        RHS_1 = self.a * dp.ket([1,'e'])
+        RHS_2 = self.sp * dp.ket([0,'g'])
+        RHS_3 = dp.ket([0,'e'])
+        total = LHS == RHS_1 == RHS_2 == RHS_3
+        if total:
+            return True, "Pass"
+        else:
+            return False, "Multiplication of Different Operators: Fail"
+    
+    def Op_Same_Mul_test(self):
+        LHS = self.adag * self.adag* dp.ket([0,'g'])
+        RHS_1 = self.adag * dp.ket([1,'g'])
+        RHS_2 = 1.4142135623730951 * dp.ket([2, 'g'])
+        total = LHS == RHS_1 == RHS_2
+        if total:
+            return True, "Pass"
+        else:
+            return False, "Multiplication of Same Operators: Fail"
+    
+class unit_test(unittest_qop, unittest_innerproduct, unittest_vector):
+    def unit_test(self):
+        test_vec_r, test_vec_m = self.unit_test_vec()
+        test_ip_r, test_ip_m = self.unit_test_ip()
+        test_qop_r, test_qop_m = self.unit_test_qop()
+        
+        tot_r = np.concatenate((test_vec_r, test_ip_r, test_qop_r))
+        tot_m = np.concatenate((test_vec_m, test_ip_m, test_qop_m))
+        
+        if np.prod(tot_r):
+            return True, "All Tests Passed"
+        else:
+            output = tot_m[np.invert(tot_r)].tolist()
+            print(*output, sep="\n")
+        
     
