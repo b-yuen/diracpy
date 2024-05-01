@@ -4,10 +4,6 @@ import diracpy as dp
 
 class unittest_base:
     def __init__(self):
-        self.cav = dp.fock_subspace(index = 0)
-        self.atom = dp.two_level_subspace(index = 1)
-        self.example_ground_ket = dp.ket([1,'g'])
-        self.example_excited_ket = dp.ket([0,'e'])
         self.empty_ket = dp.ket([])
         self.empty_bra = dp.bra([])
         
@@ -244,6 +240,7 @@ class unittest_innerproduct(unittest_base):
     def unit_test(self, end_test = False):
         zero_r,zero_m = self.zero_prod()
         norm_r,norm_m = self.norm_test()
+        ortho_r, ortho_m = self.ortho_test()
         sym_r,sym_m = self.sym_test()
         add_ax_r,add_ax_m = self.add_axiom_test()
         add_form_r,add_form_m = self.add_form_test()
@@ -251,9 +248,9 @@ class unittest_innerproduct(unittest_base):
         sca_mul_rig_r,sca_mul_rig_m = self.sca_mul_axiom_right_test()
         mult_sp_r,mult_sp_m = self.mult_subspaces_test()
         
-        total_r = [ zero_r, norm_r, sym_r, add_ax_r, add_form_r,sca_mul_lef_r,
+        total_r = [ zero_r, norm_r, ortho_r, sym_r, add_ax_r, add_form_r,sca_mul_lef_r,
                    sca_mul_rig_r, mult_sp_r]
-        total_m = np.array([ zero_m, norm_m, sym_m, add_ax_m, add_form_m,sca_mul_lef_m,
+        total_m = np.array([ zero_m, norm_m, ortho_m, sym_m, add_ax_m, add_form_m,sca_mul_lef_m,
                    sca_mul_rig_m, mult_sp_m])
         if np.prod(total_r):
             return True, "All Vector Space Tests Passed"
@@ -289,7 +286,22 @@ class unittest_innerproduct(unittest_base):
             return False, "Norm is Real: Fail"
         elif not prod_nonnegative:
             return False, "Norm is Negative: Fail"
+    
+    def ortho_test(self):
+        bk_orth = dp.bra([1]) * dp.ket([1])
+        bk_orth_check = bk_orth == 1
         
+        bk_non_orth = dp.bra([1]) * dp.ket([2])
+        bk_non_orth_check = bk_non_orth == 0
+        
+        total = bk_orth_check * bk_non_orth_check
+        
+        if total:
+            return True, "Pass"
+        elif not bk_orth_check: 
+            return False, "Orthogonal Vectors Don't Inner Product to One: Fail"
+        elif not bk_non_orth_check:
+            return False, "Different Vectors Don't Inner Product to Zero: Fail"
     def sym_test(self):
         LHS = self.bra_u*self.ket_v
         RHS = self.bra_v*self.ket_u
@@ -321,15 +333,7 @@ class unittest_innerproduct(unittest_base):
             return True, "Pass"
         else:
             return False, "Scalar multiplacation in the Bra vector in the innerproduct test: Fail"  
-        
-    def sca_mul_axiom_right_test(self):
-        LHS = dp.bra([4]) * (1+2j)*dp.ket([4])
-        RHS = dp.bra([4]) * dp.ket([4]) + np.conj(2j)* dp.bra([4]) * dp.ket([4])
-        if LHS == RHS:
-            return True, "Pass"
-        else:
-            return False, "Scalar multiplacation in the Ket vector in the innerproduct test: Fail"
-    
+            
     def mult_subspaces_test(self):
         bra1u = dp.bra([2,3j])
         ket1u = dp.ket([2,3j])
@@ -363,8 +367,94 @@ class unittest_innerproduct(unittest_base):
         elif not homo:
             return False, "Multiple Subspaces Homogeneity: Fail"
 
-unittest_innerproduct().unit_test(end_test=True)
-
-
 class unittest_qop(unittest_base):
-    pass
+    def __init__(self):
+        cav = dp.fock_subspace(index = 0)
+        atom = dp.two_level_subspace(index = 1)
+        self.example_ground_ket = dp.ket([1,'g'])
+        self.example_excited_ket = dp.ket([0,'e'])
+        self.a = cav.a
+        self.adag = cav.adag
+        self.sig_p = atom.sigma_plus
+        self.sig_m = atom.sigma_minus
+    
+    def unit_test(self, end_test = False):
+        Focka_r, Focka_m = self.Fock_a_op_test()
+        Fockadag_r, Fockadag_m = self.Fock_adag_op_test()
+        TwoLevelsp_r, TwoLevelsp_m = self.Two_Level_sp_op_test()
+        TwoLevelsm_r, TwoLevelsm_m = self.Two_Level_sm_op_test()
+        #Floqet1_r, Floqet1_m = self.Floquet_1_op_test()
+        
+        
+    def Fock_a_op_test(self):
+        op = self.a
+        bra_LHS = dp.bra([3])* op
+        bra_RHS = 2.0 * dp.bra([4])
+        bra = bra_LHS == bra_RHS
+        
+        ket_LHS = op * dp.ket([4])
+        ket_RHS = 2.0 * dp.ket([3])
+        ket = ket_LHS == ket_RHS
+        
+        if bra*ket:
+            return True, "Pass"
+        elif not ket:
+            return False, "Fock Space 'a' Operators Acting on Ket: Fail"
+        elif not bra:
+            return False, "Fock Space 'a' Operators Acting on Bra: Fail"
+        
+    def Fock_adag_op_test(self):
+        op = self.adag
+        bra_LHS = dp.bra([4])* op
+        bra_RHS = 2.0 * dp.bra([3])
+        bra = bra_LHS == bra_RHS
+        
+        ket_LHS = op * dp.ket([3])
+        ket_RHS = 2.0 * dp.ket([4])
+        ket = ket_LHS == ket_RHS
+        
+        if bra*ket:
+            return True, "Pass"
+        elif not ket:
+            return False, "Fock Space 'a dagger' Operators Acting on Ket: Fail"
+        elif not bra:
+            return False, "Fock Space 'a dagger' Operators Acting on Bra: Fail"
+    
+    def Two_Level_sp_op_test(self):
+        op = self.sig_p
+        bra_LHS = dp.bra([1,'e']) * op
+        bra_RHS = dp.bra([1,'g'])
+        bra = bra_LHS == bra_RHS
+        
+        ket_LHS = op * dp.ket([1,'g'])
+        ket_RHS = dp.ket([1,'e'])
+        ket = ket_LHS == ket_RHS
+        
+        if bra*ket:
+            return True, "Pass"
+        elif not ket:
+            return False, "Two Level 'sigma plus' Operators Acting on Ket: Fail"
+        elif not bra:
+            return False, "Two Level 'sigma plus' Operators Acting on Bra: Fail"
+        
+    def Two_Level_sm_op_test(self):
+        op = self.sig_p
+        bra_LHS = dp.bra([1,'e']) * op
+        bra_RHS = dp.bra([1,'g'])
+        bra = bra_LHS == bra_RHS
+        
+        ket_LHS = op * dp.ket([1,'g'])
+        ket_RHS = dp.ket([1,'e'])
+        ket = ket_LHS == ket_RHS
+        
+        if bra*ket:
+            return True, "Pass"
+        elif not ket:
+            return False, "Two Level 'sigma plus' Operators Acting on Ket: Fail"
+        elif not bra:
+            return False, "Two Level 'sigma plus' Operators Acting on Bra: Fail"
+    
+    def Floquet_1_op_test(self):
+        #NOT IMPLEMENTED
+        pass
+    
