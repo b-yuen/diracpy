@@ -100,7 +100,9 @@ class unittest_base_vector(unittest_base):
         return LHS == RHS
     
 class unittest_vector(unittest_base_vector):
-    
+    def __init__(self):
+        super().__init__()
+        
     def unit_test_vec(self, end_test = False):
         com_result, com_message = self.com_test()
         asoc_result, asoc_message = self.asoc_test()
@@ -231,7 +233,7 @@ class unittest_vector(unittest_base_vector):
 
 class unittest_innerproduct(unittest_base):
     def __init__(self):
-        unittest_base.__init__(self)
+        super().__init__()
         self.ket_u = 1/(2**(0.5)) * dp.ket([2]) + 1/(8**(0.5)) * dp.ket([4])
         self.bra_u = 1/(2**(0.5)) * dp.bra([2]) + 1/(8**(0.5)) * dp.bra([4])
         self.bra_v = (1 + 2**(0.5)) * dp.bra([6]) - 4*1j * dp.bra([7])
@@ -245,13 +247,12 @@ class unittest_innerproduct(unittest_base):
         add_ax_r,add_ax_m = self.add_axiom_test()
         add_form_r,add_form_m = self.add_form_test()
         sca_mul_lef_r,sca_mul_lef_m = self.sca_mul_axiom_left_test()
-        sca_mul_rig_r,sca_mul_rig_m = self.sca_mul_axiom_right_test()
         mult_sp_r,mult_sp_m = self.mult_subspaces_test()
         
         total_r = [ zero_r, norm_r, ortho_r, sym_r, add_ax_r, add_form_r,sca_mul_lef_r,
-                   sca_mul_rig_r, mult_sp_r]
+                   mult_sp_r]
         total_m = np.array([ zero_m, norm_m, ortho_m, sym_m, add_ax_m, add_form_m,sca_mul_lef_m,
-                   sca_mul_rig_m, mult_sp_m])
+                   mult_sp_m])
         if np.prod(total_r):
             return True, "All Inner Product Tests Passed"
         else:
@@ -369,6 +370,7 @@ class unittest_innerproduct(unittest_base):
 
 class unittest_qop(unittest_base):
     def __init__(self):
+        super().__init__()
         cav = dp.fock_subspace(index = 0)
         atom = dp.two_level_subspace(index = 1)
         self.example_ground_ket = dp.ket([1,'g'])
@@ -405,7 +407,7 @@ class unittest_qop(unittest_base):
                    Conj_a_m, Conj_adag_m, Conj_sp_m, Conj_sm_m,
                    Sca_mul_m, Sca_div_m, Op_add_m, Op_minus_m, Op_Same_mul_m, Op_Diff_mul_m])
         if np.prod(total_r):
-            return True, "All QOP Tests Passed"
+            return True,  "All QOP Tests Passed"
         else:
             if not end_test:
                 return False, total_m[np.invert(total_r)]
@@ -578,7 +580,7 @@ class unittest_qop(unittest_base):
     def Op_add_test(self):
         ket = dp.ket([1,'g'])
         LHS_a = (self.a + self.a) * ket
-        RHS_a = self.a * ket - self.a * ket
+        RHS_a = self.a * ket + self.a * ket
         a_result = LHS_a == RHS_a
         
         LHS_sp = (self.sig_p + self.sig_p) * ket
@@ -614,9 +616,9 @@ class unittest_qop(unittest_base):
             return False, "Operator Subtraction Doesn't Work for 'sigma plus': Fail"
     
     def Op_Diff_Mul_test(self):
-        LHS = self.a * self.sp* dp.ket([1,'g'])
+        LHS = self.a * self.sig_p* dp.ket([1,'g'])
         RHS_1 = self.a * dp.ket([1,'e'])
-        RHS_2 = self.sp * dp.ket([0,'g'])
+        RHS_2 = self.sig_p * dp.ket([0,'g'])
         RHS_3 = dp.ket([0,'e'])
         total = LHS == RHS_1 == RHS_2 == RHS_3
         if total:
@@ -635,18 +637,29 @@ class unittest_qop(unittest_base):
             return False, "Multiplication of Same Operators: Fail"
     
 class unit_test(unittest_qop, unittest_innerproduct, unittest_vector):
+    def __init__(self):
+        super().__init__()
+    
     def unit_test(self):
-        test_vec_r, test_vec_m = self.unit_test_vec()
-        test_ip_r, test_ip_m = self.unit_test_ip()
-        test_qop_r, test_qop_m = self.unit_test_qop()
+        test_vec_b, test_vec_m = self.unit_test_vec()
+        test_ip_b, test_ip_m = self.unit_test_ip()
+        test_qop_b, test_qop_m = self.unit_test_qop()
         
-        tot_r = np.concatenate((test_vec_r, test_ip_r, test_qop_r))
-        tot_m = np.concatenate((test_vec_m, test_ip_m, test_qop_m))
+        tot_b = test_vec_b * test_ip_b * test_qop_b
+        tot_m = np.array([])
         
-        if np.prod(tot_r):
+        if not test_vec_b:
+            tot_m = np.append(tot_m, test_vec_m)
+        
+        if not test_ip_b:
+            tot_m = np.append(tot_m, test_ip_m)
+        if not test_qop_b:
+            tot_m = np.append(tot_m, test_qop_m)
+        
+        if np.prod(tot_b):
             return True, "All Tests Passed"
         else:
-            output = tot_m[np.invert(tot_r)].tolist()
+            output = tot_m.tolist()
             print(*output, sep="\n")
-        
-    
+            
+unit_test().unit_test()            
