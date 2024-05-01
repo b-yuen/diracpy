@@ -300,32 +300,31 @@ class unittest_innerproduct(unittest_base):
         
     def add_axiom_test(self):
         #Might be reduntant
-        LHS = dp.bra([4 + 5j]) * dp.ket([3])
-        RHS = dp.bra([4])*dp.ket([3]) + dp.bra([5j])*dp.ket([3])
+        LHS = (4 + 5j)*dp.bra([4]) * dp.ket([4])
+        RHS = (4)*dp.bra([4])*dp.ket([4]) + (5j)*dp.bra([4])*dp.ket([4])
         if LHS == RHS:
             return True, "Pass"
         else:
             return False, "Additivty axiom of the innerproduct test: Fail"
         
     def add_form_test(self):
-        LHS = dp.bra([3 + 4j]) * dp.ket([3 + 4j])
-        RHS = dp.bra([3])*dp.ket([3]) + 2* np.real(dp.bra([3])*dp.ket([4j])) + dp.bra([4j])*dp.ket([4j])
+        LHS = (3 - 4j)*dp.bra([1]) * (3 + 4j)*dp.ket([1])
+        RHS = (3*3)*dp.bra([1])*dp.ket([1]) + 2* np.real((3*4j)*dp.bra([1])*dp.ket([1])) + (4j*(-4j))*dp.bra([1])*dp.ket([1])
         if LHS == RHS:
             return True, "Pass"
         else:
             return False, "Additive Formula Test: Fail"
     def sca_mul_axiom_left_test(self):   
-        LHS = dp.ket([5*2])*dp.bra([3])
-        RHS = 5*dp.ket([2])*dp.bra([3])
+        LHS = (5*dp.bra([2]))*dp.ket([2])
+        RHS = 5*dp.bra([2])*dp.ket([2])
         if LHS == RHS:
             return True, "Pass"
         else:
             return False, "Scalar multiplacation in the Bra vector in the innerproduct test: Fail"  
         
     def sca_mul_axiom_right_test(self):
-        bra = 4 * dp.bra([4])
-        LHS = bra * (dp.ket([2*2])+ dp.ket([2j*3]))
-        RHS = np.conj(2) * bra * dp.ket([2]) + np.conj(2j)*bra * dp.ket([3])
+        LHS = dp.bra([4]) * (1+2j)*dp.ket([4])
+        RHS = dp.bra([4]) * dp.ket([4]) + np.conj(2j)* dp.bra([4]) * dp.ket([4])
         if LHS == RHS:
             return True, "Pass"
         else:
@@ -337,11 +336,11 @@ class unittest_innerproduct(unittest_base):
         bra1v = dp.bra([3,3j])
         ket1v = dp.ket([3,3j])
         
-        bra2 = dp.bra([1 + 2,3])
-        bra2a = dp.bra([1,3])
-        bra2b = dp.bra([2,3])
-        ket2 = dp.ket([4,2])
-        bra3 = dp.bra([2*2,3j])
+        bra2 = (1+2)*dp.bra([2,3])
+        bra2a = dp.bra([2,3])
+        bra2b = 2*dp.bra([2,3])
+        ket2 = dp.ket([2,3])
+        bra3 = 2*dp.bra([2,3j])
         
         com = bra1u * ket1v == bra1v * ket1u
         add = bra2 * ket2 == bra2a*ket2 + bra2b*ket2
