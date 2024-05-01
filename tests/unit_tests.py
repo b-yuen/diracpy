@@ -134,11 +134,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Commutivity Fail:both"
+            return False, "Vector Space Commutivity Fail:both bra and ket"
         elif not bra:
-            return False, "Commutivity Fail:bra"
+            return False, "Vector Space Commutivity Fail:bra"
         elif not ket:
-            return False, "Commutivity Fail:ket"
+            return False, "Vector Space Commutivity Fail:ket"
     
     def asoc_test(self):
         bra = self.assoc_test_bra()
@@ -147,11 +147,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Associativity Fail:both"
+            return False, "Vector Space Associativity Fail:both bra and ket"
         elif not bra:
-            return False, "Associativity Fail:bra"
+            return False, "Vector Space Associativity Fail:bra"
         elif not ket:
-            return False, "Associativity Fail:ket"
+            return False, "Vector Space Associativity Fail:ket"
     
     def id_test(self):
         bra = self.id_test_bra()
@@ -160,11 +160,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Identity Fail:both"
+            return False, "Vector Space Identity Fail:both bra and ket"
         elif not bra:
-            return False, "Identity Fail:bra"
+            return False, "Vector Space Identity Fail:bra"
         elif not ket:
-            return False, "Identity Fail:ket"
+            return False, "Vector Space Identity Fail:ket"
         
     def inv_test(self):
         bra = self.inv_test_bra()
@@ -173,11 +173,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Inverse Fail:both"
+            return False, "Vector Space Inverse Fail:both bra and ket"
         elif not bra:
-            return False, "Inverse Fail:bra"
+            return False, "Vector Space Inverse Fail:bra"
         elif not ket:
-            return False, "Inverse Fail:ket"
+            return False, "Vector Space Inverse Fail:ket"
     
     def sca_mul_test(self):
         bra = self.sca_mul_test_bra()
@@ -186,11 +186,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Scalar Multiplication Fail:both"
+            return False, "Vector Space Scalar Multiplication Fail:both bra and ket"
         elif not bra:
-            return False, "Scalar Multiplication Fail:bra"
+            return False, "Vector Space Scalar Multiplication Fail:bra"
         elif not ket:
-            return False, "Scalar Multiplication Fail:ket"
+            return False, "Vector Space Scalar Multiplication Fail:ket"
     
     def id_scal_mul_test(self):
         bra = self.id_sca_mul_test_bra()
@@ -199,11 +199,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Identity Scalar Multiplication Fail:both"
+            return False, "Vector Space Identity Scalar Multiplication Fail:both bra and ket"
         elif not bra:
-            return False, "Identiy Scalar Multiplication Fail:bra"
+            return False, "Vector Space Identiy Scalar Multiplication Fail:bra"
         elif not ket:
-            return False, "Identity Scalar Multiplication Fail:ket"
+            return False, "Vector Space Identity Scalar Multiplication Fail:ket"
         
     def dist_sca_add_test(self):
         bra = self.dist_sca_add_test_bra()
@@ -212,11 +212,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Distributivity of Scalar Multiplication wrt Vector Addition Fail:both"
+            return False, "Vector Space Distributivity of Scalar Multiplication wrt Vector Addition Fail:both bra and ket"
         elif not bra:
-            return False, "Distributivity of Scalar Multiplication wrt Vector Addition Fail:bra"
+            return False, "Vector Space Distributivity of Scalar Multiplication wrt Vector Addition Fail:bra"
         elif not ket:
-            return False, "Distributivity of Scalar Multiplication wrt Vector Addition Fail:ket"
+            return False, "Vector Space Distributivity of Scalar Multiplication wrt Vector Addition Fail:ket"
     
     def dist_vec_add_test(self):
         bra = self.dist_vec_add_test_bra()
@@ -225,11 +225,11 @@ class unittest_vector(unittest_base_vector):
         if total:
             return True, "Pass"
         elif bra == ket:
-            return False, "Distributivity of Scalar Multiplication wrt Scalar Addition Fail:both"
+            return False, "Vector Space Distributivity of Scalar Multiplication wrt Scalar Addition Fail:both bra and ket"
         elif not bra:
-            return False, "Distributivity of Scalar Multiplication wrt Scalar Addition Fail:bra"
+            return False, "Vector Space Distributivity of Scalar Multiplication wrt Scalar Addition Fail:bra"
         elif not ket:
-            return False, "Distributivity of Scalar Multiplication wrt Scalar Addition Fail:ket"
+            return False, "Vector Space Distributivity of Scalar Multiplication wrt Scalar Addition Fail:ket"
 
 class unittest_innerproduct(unittest_base):
     def __init__(self):
@@ -662,4 +662,6 @@ class unit_test(unittest_qop, unittest_innerproduct, unittest_vector):
             output = tot_m.tolist()
             print(*output, sep="\n")
             
-unit_test().unit_test()            
+if __name__ == "__main__":
+    unit_test().unit_test()
+    
