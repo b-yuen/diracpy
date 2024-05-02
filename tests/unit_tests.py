@@ -657,6 +657,7 @@ class unit_test(unittest_qop, unittest_innerproduct, unittest_vector):
             tot_m = np.append(tot_m, test_qop_m)
         
         if np.prod(tot_b):
+            print("All Tests Passed")
             return True, "All Tests Passed"
         else:
             output = tot_m.tolist()
