@@ -720,17 +720,21 @@ class non_hermitian_unitaryevolution:
         # hhbar = self.hmatrix @ np.conj(self.hmatrix)
         # self.evals, self.evecs = np.linalg.eig(hhbar)
         # self.evals = np.sqrt(self.evals)
+        self.s = np.transpose(self.evecs)
+        self.si = np.linalg.inv(self.s)
         
     def u_op(self, t):
         u = np.zeros([self.dim, self.dim], complex)
         for i in range(self.dim):
             u[i,i] = np.exp(-1.j * self.evals[i] * t)
-        # u = self.hc(self.evecs) @ u @ self.evecs
-        # u = self.evecs @ u @ self.hc(self.evecs)
-        s = np.transpose(self.evecs)
-        si = np.linalg.inv(s)
-        u = si @ u @ s
+        u = self.si @ u @ self.s
         return u
+    
+    def u_op_matrixelement(self, i, j, t):
+        diag_elements = np.exp(-1.j * self.evals * t)
+        u = np.diag(diag_elements)
+        u_ij = self.si[i] @ u @ self.s[:,j]
+        return u_ij
         
     def hc(self, np2darray):
         return np.transpose(np.conj(np2darray))
