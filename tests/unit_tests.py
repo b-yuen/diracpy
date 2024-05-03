@@ -635,17 +635,139 @@ class unittest_qop(unittest_base):
             return True, "Pass"
         else:
             return False, "Multiplication of Same Operators: Fail"
-    
-class unit_test(unittest_qop, unittest_innerproduct, unittest_vector):
+
+class unittest_dynamics(unittest_base):
     def __init__(self):
         super().__init__()
+
+        self.cav = dp.fock_subspace(index = 0)
+        self.atom = dp.two_level_subspace(index = 1)
+        
+        kappa =123179248988002.58
+        ham = self.generate_ham()
+        initialbasis = [(1,'g'),(0,'e')]
+        self.sys1 = dp.qsys(ham,initialstates = initialbasis, n_int = 0)
+        self.sys2 = dp.qsys(ham,initialstates = initialbasis, n_int = 0, jump_ops = [np.sqrt(kappa) * self.cav.a])
+        
+        gs = dp.ket((0,'e'))
+        rho_0_op = gs * gs.conj()
+        self.rho_0_1 = self.sys1.matrix(rho_0_op)
+        self.rho_0_2 = self.sys2.matrix(rho_0_op)
+        
+        T = T = 1e-12
+        self.times = np.linspace(0, T, 500)
+        
     
-    def unit_test(self):
+    def unit_test_dyn(self, end_test = False):
+        evo_r,evo_m = self.unit_evo_test()
+        linb_r,linb_m = self.lindblad_test()
+        vn_r, vn_m  = self.VonNeumann_test()
+        liou_r, liou_m  = self.liouville_test()
+        sint_r, sint_m  = self.schrodint_test()
+        qj_r, qj_m  = self.quantumjumps_test()
+        
+        total_r = [evo_r, linb_r, vn_r, liou_r, sint_r, qj_r]
+        total_m = np.array([evo_m, linb_m, vn_m, liou_m, sint_m, qj_m])
+        if np.prod(total_r):
+            return True,  "All QOP Tests Passed"
+        else:
+            if not end_test:
+                return False, total_m[np.invert(total_r)]
+            else:
+                output = total_m[np.invert(total_r)].tolist()
+                print(*output, sep="\n")
+                
+    def generate_ham(self):
+        delta_c = 2127293674469188.0
+        delta_a = 2127293674469188.0
+        g = 60112183589120.08
+        ham = delta_c * self.cav.n +  delta_a * self.atom.sigma_z
+        ham_int = g * (self.cav.a * self.atom.sigma_plus +  self.cav.adag * self.atom.sigma_minus)
+        return ham + ham_int
+    
+    def error_tol(self,f1, f2, tol):
+        return abs(f1 - f2) < tol
+    
+    def unit_evo_test(self, tol = 1e-8):
+        soln = dp.unitaryevolution(self.rho_0_1, self.times, self.sys1)
+        soln.solve()
+        cav_pop = np.real(soln.soln[:,0,0])[-1]
+        test = self.error_tol(cav_pop, 0.16770312820379182,tol)
+        if test:
+            return True, "Pass"
+        else:
+            return False, "Unitary Evolution Test: Fail"
+    
+    def lindblad_test(self, tol = 1e-8):
+        soln = dp.lindbladint(self.rho_0_2, self.times, self.sys2)
+        soln.solve()
+        cav_pop = np.real(soln.soln[:,0,0])[-1]
+        test = self.error_tol(cav_pop, 1.0402581147105376e-13,tol)
+        if test:
+            return True, "Pass"
+        else:
+            return False, "Linbland Test: Fail"
+    
+    def VonNeumann_test(self, tol = 1e-8):
+        soln = dp.vonneumannint(self.rho_0_2, self.times, self.sys2)
+        cav_pop = np.real(soln.soln[:,0,0])[-1]
+        test = self.error_tol(cav_pop, 0.167700032724725,tol)
+        if test:
+            return True, "Pass"
+        else:
+            return False, "VonNeumann Test: Fail"
+        
+    def liouville_test(self, tol = 1e-8):
+        soln = dp.liouville(self.rho_0_2, self.times, self.sys2)
+        soln.solve()
+        cav_pop = np.real(soln.soln[:,0,0])[-1]
+        #The answer is far smaller than default error
+        test = self.error_tol(cav_pop, 2.315584825739848e-27,tol)
+        if test:
+            return True, "Pass"
+        else:
+            return False, "Liouville Test: Fail"
+    
+    def schrodint_test(self, tol=1e-8):
+        rho_0_sint = np.array([0,1]) 
+        soln = dp.schrodint(rho_0_sint, self.times, self.sys1)
+        soln.solve()
+        cav_pop = np.abs(soln.soln[:,0])[-1]**2
+        test = self.error_tol(cav_pop, 0.1677069988800502,tol)
+        if test:
+            return True, "Pass"
+        else:
+            return False, "Schrodint Test: Fail"
+        
+    def quantumjumps_test(self, tol=1e-8):
+        rho_0_qj = np.array([1,0,0])
+        """
+        TO BE IMPLEMENTED
+        soln = dp.liouville(rho_0_qj, self.times, self.sys2)
+        soln.solve()
+        cav_pop = np.real(soln.soln[:,0])[-1]
+        test = self.error_tol(cav_pop, 2.315584825739848e-27,tol)
+        if test:
+            return True, "Pass"
+        else:
+            return False, "Quantum Jumps Test: Fail"
+        """
+        return True, "Not Implemented"
+    
+class unit_test(unittest_qop, unittest_innerproduct, unittest_vector, unittest_dynamics):
+    def __init__(self):
+        super().__init__()
+        unittest_dynamics.__init__(self)
+    def unit_test(self, Dynamics = True):
         test_vec_b, test_vec_m = self.unit_test_vec()
         test_ip_b, test_ip_m = self.unit_test_ip()
         test_qop_b, test_qop_m = self.unit_test_qop()
-        
-        tot_b = test_vec_b * test_ip_b * test_qop_b
+        if Dynamics:
+            test_dyn_b, test_dyn_m = self.unit_test_dyn()
+            tot_b = test_vec_b * test_ip_b * test_qop_b * test_dyn_b
+        else:
+            tot_b = test_vec_b * test_ip_b * test_qop_b
+         
         tot_m = np.array([])
         
         if not test_vec_b:
@@ -656,6 +778,10 @@ class unit_test(unittest_qop, unittest_innerproduct, unittest_vector):
         if not test_qop_b:
             tot_m = np.append(tot_m, test_qop_m)
         
+        if Dynamics:
+            if not test_dyn_b:
+                tot_m = np.append(tot_m, test_dyn_m)
+                
         if np.prod(tot_b):
             print("All Tests Passed")
             return True, "All Tests Passed"
