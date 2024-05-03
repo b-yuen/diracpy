@@ -758,15 +758,12 @@ class unit_test(unittest_qop, unittest_innerproduct, unittest_vector, unittest_d
     def __init__(self):
         super().__init__()
         unittest_dynamics.__init__(self)
-    def unit_test(self, Dynamics = True):
+    def unit_test(self):
         test_vec_b, test_vec_m = self.unit_test_vec()
         test_ip_b, test_ip_m = self.unit_test_ip()
         test_qop_b, test_qop_m = self.unit_test_qop()
-        if Dynamics:
-            test_dyn_b, test_dyn_m = self.unit_test_dyn()
-            tot_b = test_vec_b * test_ip_b * test_qop_b * test_dyn_b
-        else:
-            tot_b = test_vec_b * test_ip_b * test_qop_b
+        test_dyn_b, test_dyn_m = self.unit_test_dyn()
+        tot_b = test_vec_b * test_ip_b * test_qop_b * test_dyn_b
          
         tot_m = np.array([])
         
@@ -777,10 +774,8 @@ class unit_test(unittest_qop, unittest_innerproduct, unittest_vector, unittest_d
             tot_m = np.append(tot_m, test_ip_m)
         if not test_qop_b:
             tot_m = np.append(tot_m, test_qop_m)
-        
-        if Dynamics:
-            if not test_dyn_b:
-                tot_m = np.append(tot_m, test_dyn_m)
+        if not test_dyn_b:
+            tot_m = np.append(tot_m, test_dyn_m)
                 
         if np.prod(tot_b):
             print("All Tests Passed")
