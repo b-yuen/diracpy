@@ -9,6 +9,7 @@
 # numerically solve quantum dynamics
 
 import numpy as np
+import scipy
 from scipy.integrate import odeint
 from random import random
 from multiprocessing import Pool
