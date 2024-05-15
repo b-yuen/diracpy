@@ -387,6 +387,7 @@ class schrodint:
             for j in range(dim):
                 realm[2*i,2*j] = np.real(matrix[i,j])
                 realm[2*i,2*j+1] = -np.imag(matrix[i,j])
+                # realm[2*i,2*j+1] = np.imag(matrix[i,j]) # brake to test unit_tests
                 realm[2*i+1,2*j] = np.imag(matrix[i,j])
                 realm[2*i+1,2*j+1] = np.real(matrix[i,j])
         return realm
