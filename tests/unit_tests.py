@@ -647,7 +647,8 @@ class unittest_dynamics(unittest_base):
         ham = self.generate_ham()
         initialbasis = [(1,'g'),(0,'e')]
         self.sys1 = dp.qsys(ham,initialstates = initialbasis, n_int = 0)
-        self.sys2 = dp.qsys(ham,initialstates = initialbasis, n_int = 0, jump_ops = [np.sqrt(kappa) * self.cav.a])
+        self.sys2 = dp.qsys(ham,initialstates = initialbasis, n_int = 0, 
+                            jump_ops = [np.sqrt(kappa) * self.cav.a])
         
         gs = dp.ket((0,'e'))
         rho_0_op = gs * gs.conj()
@@ -682,7 +683,8 @@ class unittest_dynamics(unittest_base):
         delta_a = 2127293674469188.0
         g = 60112183589120.08
         ham = delta_c * self.cav.n +  delta_a * self.atom.sigma_z
-        ham_int = g * (self.cav.a * self.atom.sigma_plus +  self.cav.adag * self.atom.sigma_minus)
+        ham_int = g * (self.cav.a * self.atom.sigma_plus + 
+                       self.cav.adag * self.atom.sigma_minus)
         return ham + ham_int
     
     def error_tol(self,f1, f2, tol):
@@ -754,7 +756,8 @@ class unittest_dynamics(unittest_base):
         """
         return True, "Not Implemented"
     
-class unit_test(unittest_qop, unittest_innerproduct, unittest_vector, unittest_dynamics):
+class unit_test(unittest_qop, unittest_innerproduct, unittest_vector, 
+                unittest_dynamics):
     def __init__(self):
         super().__init__()
         unittest_dynamics.__init__(self)
