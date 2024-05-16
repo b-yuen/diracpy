@@ -34,6 +34,9 @@ class qsys:
         # a system which decays at rate kappa via annihilation operator fock_subspace.a
         # the jump operator should be np.sqrt(kappa) * fock_subspace.a
         
+        # **kwargs includes keyword argument verbose, which defaults to false
+        # this is used to print messages on build progress
+        
         
         self.n_int = n_int
         self._input_hamiltonian(hamiltonian_operator, H0terms, Vterms)
@@ -99,7 +102,7 @@ class qsys:
         else:
             self._build(initial_states, **kwargs)
         
-    def _build(self, initialstates, build_hmatrix=True):
+    def _build(self, initialstates, build_hmatrix=True, verbose=False):
         # build basis of coherent coupled states to order n_int
         # self.n_int = n_int
         # self.basis = [ket(state) for state in initialstates]
@@ -111,7 +114,7 @@ class qsys:
         #         [new_states.append(new_state) for new_state in state_out_components if new_state not in self.basis]
         #     self.basis += new_states
         # print("building...")
-        print("building sys basis...")
+        if verbose: print("building sys basis...")
         t1 = time.time()
         
         self.basis = self._build_coherent_sys(initialstates)
@@ -122,7 +125,7 @@ class qsys:
         else:
             basis_incomplete = True
         while basis_incomplete:
-            print('...appending decay subspaces...')
+            if verbose: print('...appending decay subspaces...')
             new_states = []
             for state in self.basis:
                 for jump_op in self.jump_ops:
@@ -148,17 +151,17 @@ class qsys:
 #                basis += decayedbasis
         
         t2 = time.time()
-        print("...system basis built in {} seconds".format(t2-t1))
+        if verbose: print("...system basis built in {} seconds".format(t2-t1))
 
         self.adjoint_basis = [bra(state) for state in self.basis]
         self.dim = len(self.basis)
         if build_hmatrix==True:
-            print("defining hmatrix...")
+            if verbose: print("defining hmatrix...")
             t3 = time.time()
             # self.hmatrix = self.make_hmatrix()
             self.make_hmatrix()
             t4 = time.time()
-            print("...hmatrix evaluated in {} seconds".format(t4-t3))
+            if verbose: print("...hmatrix evaluated in {} seconds".format(t4-t3))
         
     # builds the basis states coherently coupled to initialstates via hamiltonian  
     def _build_coherent_sys(self, initialstates):

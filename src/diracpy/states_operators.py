@@ -93,8 +93,11 @@ class qvec:
                     self.vec[ tuple( basisstate[i] ) ] = c
             except TypeError:
                 # when cnum is not iterable...
-                if basisstate != None: # if zero then empty state is created, i.e. self.vec= {}.
+                if basisstate != None and len(tuple(basisstate)) > 0:
                     self.vec[ tuple( basisstate )] = cnum
+                else:
+                    # zero qvec is created, i.e. self.vec= {}
+                    pass
                 
     def new_instance(self, basisstate = None, cnum=1):
         """
