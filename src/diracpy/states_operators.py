@@ -1,14 +1,38 @@
+"""Defines quantum state vectors 'bra' and 'ket' and quantum operators.
+
+This module contains classes to define 'bra' and 'ket' objects as well as
+'qop' (quantum operator) objects that act on these. These three classes
+encode the required mathematical actions of such objects within a Hilbert
+space. E.g. 'ket' objects satisy the axioms of a complex vector space, and
+'bra' objects are there duals. Inner and outer products are defined. 'qop'
+objects map 'ket' objects to new 'ket' objects, and 'bra' objects to new 'bra'
+objects, and can be combined linearly as required.
+
+Classes
+-------
+    qvec
+    ket
+    bra
+    qop
+
+Notes
+-----
+    - Objects cannot be pickled due to presence of lambda functions.
+    - Partial contraction of bra and ket (e.g. for partial trace) not yet
+    implemented.
+"""
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Feb 15 15:33:45 2022
+#C reated on Tue Feb 15 15:33:45 2022
 
-@author: benjaminyuen
-"""
+# @author: benjaminyuen
 
 # Still To implement
 # problem pickling __add__(), probably due to lambda functions.
-# partial contraction of bras/kets with kets/bras of a factor space
+# partial contraction of bras/kets with kets/bras of a factor space.
+# new_instance methods of qvec, ket and bra should be private, _new_instance.
+# Constructor for qvec class should be rewritten, utilising private classes.
 
 from numpy import conj as cconj
 from copy import deepcopy
@@ -17,7 +41,7 @@ from copy import deepcopy
 #%% qvec class defintion
 class qvec:
     """
-    Parent class to define general properties of bra and ket vectors
+    Parent class to define general properties of bra and ket vectors.
     
     This class defines attributes and methods common to both types of vectors.
     The bra and ket classes below are child classes of qvec.
@@ -37,6 +61,8 @@ class qvec:
     def __init__(self, basisstate = None, cnum=1, **kwargs):
         # **kwargs should go - but need to test with unit_tests.py first
         """
+        Initialize a new instance of a qvec.
+        
         Parameters
         ----------
         basisstate : list, tuple, string or a qvec, optional
@@ -53,7 +79,6 @@ class qvec:
         -------
         None.
         """
-        
         self.type = ''
         self.vec = {}
         # populate vec with basis states and cnum's
@@ -73,10 +98,11 @@ class qvec:
                 
     def new_instance(self, basisstate = None, cnum=1):
         """
-        Creates a new qvec with for the basis state given by basistate and
-        the cnum specified.
+        Create new instance of a qvec.
         
-        If non basis state is given then this produces the zero qvec.
+        Creates a new qvec with for the basis state given by basistate and
+        the cnum specified. If non basis state is given then this produces 
+        the zero qvec.
         
         Parameters
         ----------
@@ -91,23 +117,24 @@ class qvec:
         qvec
             new qvec.
         """
-        
+        # This should be turned into a private method
         return qvec(basisstate, cnum)
             
     def copy(self):
         """
-        returns a deepcopy of the qvec object
+        Return a deepcopy of the qvec object.
         
         Returns
         -------
         qvec
             copy of self.
         """
-        
         return deepcopy(self)
     
     def c(self, basisstate):
         """
+        Return qvec coefficient.
+        
         gets coefficient of specified basistate from the qvec object.
         If the basisstate is not in the qvec then zero is returned.
 
@@ -121,7 +148,6 @@ class qvec:
         coefficient : int, float or complex
             The coefficient of specified basistate
         """
-        
         try:
             coefficient = self.vec[tuple(basisstate)]
         except KeyError:
@@ -130,7 +156,7 @@ class qvec:
     
     def update(self, basisstate, cnum=1):
         """
-        update the cnum for specified basistate with coefficient cnum.
+        Update the cnum for specified basistate with coefficient cnum.
 
         Parameters
         ----------
@@ -143,18 +169,16 @@ class qvec:
         -------
         None.
         """
-        
         self.vec[tuple(basisstate)] = cnum
         
     def print(self):
         """
-        prints qvec coefficients and basisstates
+        Print qvec coefficients and basisstates.
 
         Returns
         -------
         None.
         """
-        
         if self.vec:
             [print(value, ' * ', self.type, key) for key, value in self.vec.items()]
         else:
@@ -162,16 +186,14 @@ class qvec:
             
     def __str__(self):
         """
-        str method for qvecs
+        Implement str method for qvecs.
 
         Returns
         -------
         output : str
             returns string in format 
             cnum1 * basisstate1 + cnum2 * basisstate2 ...
-
         """
-        
         output = ''
         if self.vec:
             for state, cnum in self.vec.items():
@@ -188,18 +210,19 @@ class qvec:
     
     def __neg__(self):
         """
-        negation operator method
+        Negation operator method.
 
         Returns
         -------
         qvec
             -1 * self.
-
         """
         return self.__mul__(-1)
     
     def __mul__(self, scalar):
         """
+        Left multiplication.
+        
         multiplication of qvecs from left by a scalar, scalar * qvec.
         multiplies all basisstates coefficients of this qvec by the scalar
 
@@ -213,7 +236,6 @@ class qvec:
         output : qvec
             multiplied qvec.
         """
-        
         if isinstance(scalar, (int, float, complex)):
             if scalar == 0:
                 output = self.new_instance()
@@ -227,6 +249,8 @@ class qvec:
     
     def __rmul__(self, scalar):
         """
+        Right multiplication.
+        
         multiplication of qvecs from the right, qvec * scalar.
 
         Parameters
@@ -239,7 +263,6 @@ class qvec:
         output : qvec
             right multiplied qvec.
         """
-        
         if isinstance(scalar, (int, float, complex)):
             output = self.__mul__(scalar)
         else:
@@ -248,6 +271,8 @@ class qvec:
     
     def __truediv__(self, scalar):
         """
+        Division.
+        
         Division operator for qvec / scalar. Divides each basisstate
         coefficient by the scalar.
 
@@ -261,7 +286,6 @@ class qvec:
         output : qvec
             divided qvec.
         """
-        
         if isinstance(scalar,(int, float, complex)):
             basisstates = [state for state in self.vec]
             cnums = [cnum / scalar for cnum in self.vec.values()]
@@ -272,7 +296,9 @@ class qvec:
     
     def __add__(self, other):
         """
-        Addition operator to adds a qvec to another qvec of the same type.
+        Left addition.
+        
+        Addition operator adds a qvec to another qvec of the same type.
 
         Parameters
         ----------
@@ -284,7 +310,6 @@ class qvec:
         output : qvec
             qvec of same type.
         """
-        
         if type(self) == type(other):
             new_qvec = self.copy()
             for other_bstate in other.vec:
@@ -301,6 +326,8 @@ class qvec:
     
     def __radd__(self, other):
         """
+        Right addition.
+        
         Right addition operator for qvecs
 
         Parameters
@@ -318,6 +345,8 @@ class qvec:
     
     def __sub__(self, other):
         """
+        Left subtraction.
+        
         subtraction operators for two qvecs of the same type
 
         Parameters
@@ -330,7 +359,6 @@ class qvec:
         output : qvec
             qvec of same type.
         """
-        
         if type(self) == type(other):
             new_qvec = self.copy()
             for other_bstate in other.vec:
@@ -347,6 +375,8 @@ class qvec:
         
     def __eq__(self, other):
         """
+        Equality.
+        
         equality operator for two vectors of the same type, i.e. qvec1 == qvec2
         Compares basisstate coefficients to see if qvecs are equal
 
@@ -360,14 +390,13 @@ class qvec:
         bool_out : bool
             True if qvec vec dictionaries are equal.
         """
-        
         bool_out = (self.type == other.type and self.vec == other.vec)
         return bool_out
 
 #%% ket class defintion
 class ket(qvec):
     """
-    A class that represents an ket.
+    Creates an object to represent a ket.
     
     This is a child class of qvec where many of the vector space and inner 
     operations on kets are defined. Methods that are specific to ket's are 
@@ -384,8 +413,11 @@ class ket(qvec):
         dictionary.
      
     """
+    
     def __init__(self, basisstate = None, cnum=1):
         """
+        Initialize a new instance of ket.
+        
         Constructor for ket's inherits from qvecs. type is set to 'ket'.
 
         Parameters
@@ -405,7 +437,7 @@ class ket(qvec):
         
     def new_instance(self, basisstate = None, cnum=1):
         """
-        Creates a new ket
+        Create a new instance of a ket.
 
         Parameters
         ----------
@@ -420,12 +452,14 @@ class ket(qvec):
             Returns new ket.
 
         """
+        # This should be turned into a private method
         return ket(basisstate, cnum)
     
     def __mul__(self, other):
         """
-        Multiplication rule of a scalar or a bra by the ket.
+        Left multiplication.
         
+        Multiplication rule of a scalar or a bra by the ket.
         Scalar multiplication inherits fro qvec class. Multiplication a bra
         is the outer product which gives an operator (qop object)
 
@@ -460,7 +494,9 @@ class ket(qvec):
         
     def __rmul__(self, other):
         """
-        right multiplication be either a scalar or a bra. When the multiplier
+        Right multiplication.
+        
+        Right multiplication be either a scalar or a bra. When the multiplier
         is a scalar then multiplication rule inherits from qvec. If multiplier
         is bra then the inner product is given, returning a scalar.
 
@@ -489,12 +525,14 @@ class ket(qvec):
     
     def conj(self):
         """
+        Hermitian conjugate.
+        
         Defines conjugation of the ket - turning the ket into a bra
 
         Returns
         -------
         conj_bra : bra
-            the conjugate bra.
+            The conjugate bra to this ket.
 
         """
         basisstates = list(self.vec.keys())
@@ -502,15 +540,79 @@ class ket(qvec):
         conj_bra = bra(basisstates, cnums)
         return conj_bra
     
+#%% bra
 class bra(qvec):
+    """
+    Creates an object to represent a ket.
+    
+    This is a child class of qvec where many of the vector space and inner 
+    operations on kets are defined. Methods that are specific to bra's are 
+    defined here.
+    
+    Attributes
+    ----------
+    type : str
+        value is 'bra'
+    vec : dict
+        inherited from qvec. All ket's are represented by a dictionary that
+        gives the coefficients of each basis state that makes up the object.
+        The the set of indices of each basisstate are the keys of this
+        dictionary.
+        
+    """
+    
     def __init__(self, basisstate = None, cnum=1):
+        """
+        Initialize a new instance of bra.
+
+        Parameters
+        ----------
+        basisstate : list, tuple, string or a qvec, optional
+            indices or list of indices for basis state(s). The default is None.
+        cnum : int, float or complex, or iterable of these, optional
+            complex coefficients for basis states. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        """
         super().__init__(basisstate, cnum)
         self.type = 'bra'
         
     def new_instance(self, basisstate = None, cnum=1):
+        """
+        Return new instance of a bra.
+
+        Parameters
+        ----------
+        basisstate : list, tuple, string or a qvec, optional
+        cnum : int, float or complex, or iterable of these, optional
+        
+        Returns
+        -------
+        bra
+            bra object for given basisstate and cnum.
+
+        """
+        # This should be turned into a private method
         return bra(basisstate, cnum)
         
     def __mul__(self, other):
+        """
+        Left multiplication.
+
+        Parameters
+        ----------
+        other : int, float, complex, ket, qop
+            The multiplier.
+
+        Returns
+        -------
+        output : bra, int, float, complex, 
+            if other is a scalar or a qop then return type is bra
+            if other is ket then a scalar is returned
+        """
         if isinstance(other, (int, float, complex)):
             output = super().__mul__(other)
         elif isinstance(other, ket):
@@ -527,6 +629,15 @@ class bra(qvec):
         return output
     
     def conj(self):
+        """
+        Hermitian conjugate.
+
+        Returns
+        -------
+        conj_ket : ket
+            The conjugate ket to this bra.
+
+        """
         basisstates = list(self.vec.keys())
         cnums = [cconj(value) for value in self.vec.values()]
         conj_ket = ket(basisstates, cnums)
