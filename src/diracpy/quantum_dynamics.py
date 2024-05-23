@@ -1,9 +1,32 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# """
-# Spyder Editor
+r"""Solves quantum dyanmics.
 
-# This is a temporary script file.
-# """
+Solves quantum dyanmics of :mod:`quantum systems <diracpy.quantum_system>`
+objects. Multiple dyanmical models are given by the different
+classes in this module. Each class shares a commont interface comprising of
+initial state, a list of times to solve the dynamics for, and the 
+:class:`diracpyt.quantum_systems.qsys` object that describes the system.
+The inital state is either the inital state vector or the density matrix, 
+depending on the dynamical model. In both cases, these should be vectorised
+in the basis constructed by the given :class:`diracpyt.quantum_systems.qsys` 
+object. For systems with a time dependent hamiltonian, a 
+:class:`diracpyt.quantum_systems.qsys_t` object is given instead.
+In this case only dynamical models that use scipy.integrate.odeint rather
+matrix diagonalisatin should be used -- that are the :class:`vonneumannint`, 
+:class:`lindbladint`,  :class:`schrodint` or :class:`quantumjumps` models.
+
+Classes
+-------
+    vonneumannint
+    lindbladint
+    schrodint
+    quantumjumps
+    unitaryevolution
+    non_hermitian_unitaryevolution
+    liouville
+"""
+
 
 # This script defines classes which can be used to
 # numerically solve quantum dynamics
@@ -229,125 +252,7 @@ class lindbladint:
                 for k in range(self.dim):
                     csoln[i, j, k] = realsoln[i, 2*j, 2*k] + 1.j * realsoln[i, 2*j, 2*k+1]            
         return csoln
-    
-       
-class liouville:
 
-    # z0 is the initial state of the system described by its density matrix.
-    # z0 is represented by a 2d complex numpy array with the dimensions of the Hamiltonian
-    # times is linearly spaced numpy array of times for which the system is solved for
-    # This class is used to solve the dynamics for an open quantum system using the Liouvillian.
-    # Note; to quickly access the steady state times can be a array of shape (2,) with a large final time 
-    # as the evolution is 
-
-    
-    def __init__(self, z0, times, ham_obj):
-        self.t = times
-        self.z = z0 
-        self.ham = ham_obj
-        self.dim = self.ham.dim
-        self.identity = np.identity(self.dim)
-        self.flsize = self.dim**2
-        self.vz = z0.T.reshape(z0.size)
-        self.liouvillian = self.generate_liouvillian()
-        
-    def lindblad_sop(self):
-        '''converts dissipative part of master equation into superoperator'''
-        lindbladsop = np.zeros((self.ham.hmatrix.size, self.ham.hmatrix.size), complex)
-        for i in self.ham.lindbladgamma:
-            gamma = self.ham.lindbladgamma[i]
-            lbr = self.ham.lindbladraising[i]
-            lbl = self.ham.lindbladlowering[i]
-            lindbladsop += gamma*(np.kron(lbl.conj(), lbl) - 0.5*np.kron(self.identity, lbr@lbl) - 0.5*np.kron((lbr@lbl).T, self.identity))
-        return lindbladsop
-    
-    def system_sop(self):
-        '''converts unitary part of master equation into superoperator'''
-        return -1j*(np.kron(self.identity, self.ham.hmatrix) - np.kron(self.ham.hmatrix.T, self.identity))
-        
-    def generate_liouvillian(self):
-        '''returns the liouvillian superoperator'''
-        return self.system_sop() + self.lindblad_sop()
-    
-    def eigensolve(self):
-        '''returns liouvillian eigenvalues and eigevectors'''
-        self.evals, self.levecs, self.revecs = scipy.linalg.eig(self.liouvillian, right = True, left = True)
-              
-    def expL_op(self, t):
-        L = np.zeros([self.dim**2, self.dim**2], complex)
-        for i in range(self.dim**2):
-            L[i,i] = np.exp(self.evals[i]*t)
-        L = self.revecs @ L @ np.linalg.inv(self.revecs)
-        return L
-    
-    def solve(self):
-        '''calculates time evolution of z0 using liouvillian'''
-        self.eigensolve()
-        dt = self.t[1] - self.t[0]
-        num_t = np.size(self.t)
-        self.soln = np.zeros([num_t, self.dim, self.dim], complex)
-        if np.linalg.det(self.revecs) == 0:
-            print('The Liouvillian does not have linearly independent right eigenvectors: L is not diagonalisable')
-        else: 
-            for i, t in enumerate(self.t):
-                self.soln[i] = self.vz.reshape((self.dim, self.dim)).T
-                self.vz = self.expL_op(dt)@self.vz     
-    
-    
-# test comment    
-class unitaryevolution:
-    # z0 is the initial state of the system described by its density matrix.
-    # z0 is represented by a 2d complex numpy array with the dimensions of the Hamiltonian
-    # times is linearly spaced numpy array of times for which the system is solved for
-    # This class is used to solve the dynamics for a static Hamiltonian. It uses the 
-    # the Hamiltonian function (of time) in the ham_obj, evaluated at time zero.
-    def __init__(self, z0, times, ham_obj_or_matrix):
-        
-        self.t = times
-        self.z = z0
-        # self.ham = ham_obj
-        # self.dim = self.ham.dim
-        # self.hmatrix = self.ham.ham(0)
-        self._get_ham(ham_obj_or_matrix)
-        
-    def _get_ham(self, ham_in):
-        if type(ham_in) == np.ndarray:
-            _get = self._get_hmatrix
-        else:
-            _get = self._get_ham_obj
-        return _get(ham_in)
-    
-    def _get_hmatrix(self, ham_in):
-        self.hmatrix = ham_in
-        self.dim = len(ham_in)
-        
-    def _get_ham_obj(self, ham_in):
-        self.dim = ham_in.dim
-        self.hmatrix = ham_in.ham(0)
-        
-    def eigensolve(self):
-        self.evals, self.evecs = np.linalg.eigh(self.hmatrix)
-        
-    def u_op(self, t):
-        u = np.zeros([self.dim, self.dim], complex)
-        for i in range(self.dim):
-            u[i,i] = np.exp(-1.j * self.evals[i] * t)
-        u = self.evecs @ u @ self.hc(self.evecs)
-        return u
-        
-    def hc(self, np2darray):
-        return np.transpose(np.conj(np2darray))
-    
-    def solve(self):
-        self.eigensolve()
-        dt = self.t[1] - self.t[0]
-        num_t = np.size(self.t)
-        u_dt = self.u_op(dt)
-        ud_dt = self.hc(u_dt)
-        self.soln = np.zeros([num_t, self.dim, self.dim], complex)
-        for i, t in enumerate(self.t):
-            self.soln[i] = self.z
-            self.z = u_dt @ self.z @ ud_dt
             
     
 class schrodint:
@@ -678,7 +583,63 @@ class quantumjumps(schrodint):
         n2 = 0
         for c in psi:
             n2 += abs(c)**2
-        return n2
+        return n2   
+    
+    
+# test comment    
+class unitaryevolution:
+    # z0 is the initial state of the system described by its density matrix.
+    # z0 is represented by a 2d complex numpy array with the dimensions of the Hamiltonian
+    # times is linearly spaced numpy array of times for which the system is solved for
+    # This class is used to solve the dynamics for a static Hamiltonian. It uses the 
+    # the Hamiltonian function (of time) in the ham_obj, evaluated at time zero.
+    def __init__(self, z0, times, ham_obj_or_matrix):
+        
+        self.t = times
+        self.z = z0
+        # self.ham = ham_obj
+        # self.dim = self.ham.dim
+        # self.hmatrix = self.ham.ham(0)
+        self._get_ham(ham_obj_or_matrix)
+        
+    def _get_ham(self, ham_in):
+        if type(ham_in) == np.ndarray:
+            _get = self._get_hmatrix
+        else:
+            _get = self._get_ham_obj
+        return _get(ham_in)
+    
+    def _get_hmatrix(self, ham_in):
+        self.hmatrix = ham_in
+        self.dim = len(ham_in)
+        
+    def _get_ham_obj(self, ham_in):
+        self.dim = ham_in.dim
+        self.hmatrix = ham_in.ham(0)
+        
+    def eigensolve(self):
+        self.evals, self.evecs = np.linalg.eigh(self.hmatrix)
+        
+    def u_op(self, t):
+        u = np.zeros([self.dim, self.dim], complex)
+        for i in range(self.dim):
+            u[i,i] = np.exp(-1.j * self.evals[i] * t)
+        u = self.evecs @ u @ self.hc(self.evecs)
+        return u
+        
+    def hc(self, np2darray):
+        return np.transpose(np.conj(np2darray))
+    
+    def solve(self):
+        self.eigensolve()
+        dt = self.t[1] - self.t[0]
+        num_t = np.size(self.t)
+        u_dt = self.u_op(dt)
+        ud_dt = self.hc(u_dt)
+        self.soln = np.zeros([num_t, self.dim, self.dim], complex)
+        for i, t in enumerate(self.t):
+            self.soln[i] = self.z
+            self.z = u_dt @ self.z @ ud_dt
             
 '''
 Solves a systme with a non-Hermitian (also works for Hermitian) Hamiltonian
@@ -753,6 +714,67 @@ class non_hermitian_unitaryevolution:
             psi = u_dt @ psi
         
             
+class liouville:
+
+    # z0 is the initial state of the system described by its density matrix.
+    # z0 is represented by a 2d complex numpy array with the dimensions of the Hamiltonian
+    # times is linearly spaced numpy array of times for which the system is solved for
+    # This class is used to solve the dynamics for an open quantum system using the Liouvillian.
+    # Note; to quickly access the steady state times can be a array of shape (2,) with a large final time 
+    # as the evolution is 
+
+    
+    def __init__(self, z0, times, ham_obj):
+        self.t = times
+        self.z = z0 
+        self.ham = ham_obj
+        self.dim = self.ham.dim
+        self.identity = np.identity(self.dim)
+        self.flsize = self.dim**2
+        self.vz = z0.T.reshape(z0.size)
+        self.liouvillian = self.generate_liouvillian()
+        
+    def lindblad_sop(self):
+        '''converts dissipative part of master equation into superoperator'''
+        lindbladsop = np.zeros((self.ham.hmatrix.size, self.ham.hmatrix.size), complex)
+        for i in self.ham.lindbladgamma:
+            gamma = self.ham.lindbladgamma[i]
+            lbr = self.ham.lindbladraising[i]
+            lbl = self.ham.lindbladlowering[i]
+            lindbladsop += gamma*(np.kron(lbl.conj(), lbl) - 0.5*np.kron(self.identity, lbr@lbl) - 0.5*np.kron((lbr@lbl).T, self.identity))
+        return lindbladsop
+    
+    def system_sop(self):
+        '''converts unitary part of master equation into superoperator'''
+        return -1j*(np.kron(self.identity, self.ham.hmatrix) - np.kron(self.ham.hmatrix.T, self.identity))
+        
+    def generate_liouvillian(self):
+        '''returns the liouvillian superoperator'''
+        return self.system_sop() + self.lindblad_sop()
+    
+    def eigensolve(self):
+        '''returns liouvillian eigenvalues and eigevectors'''
+        self.evals, self.levecs, self.revecs = scipy.linalg.eig(self.liouvillian, right = True, left = True)
+              
+    def expL_op(self, t):
+        L = np.zeros([self.dim**2, self.dim**2], complex)
+        for i in range(self.dim**2):
+            L[i,i] = np.exp(self.evals[i]*t)
+        L = self.revecs @ L @ np.linalg.inv(self.revecs)
+        return L
+    
+    def solve(self):
+        '''calculates time evolution of z0 using liouvillian'''
+        self.eigensolve()
+        dt = self.t[1] - self.t[0]
+        num_t = np.size(self.t)
+        self.soln = np.zeros([num_t, self.dim, self.dim], complex)
+        if np.linalg.det(self.revecs) == 0:
+            print('The Liouvillian does not have linearly independent right eigenvectors: L is not diagonalisable')
+        else: 
+            for i, t in enumerate(self.t):
+                self.soln[i] = self.vz.reshape((self.dim, self.dim)).T
+                self.vz = self.expL_op(dt)@self.vz  
         
             
         

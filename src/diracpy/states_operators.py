@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """Defines quantum state vectors 'bra' and 'ket' and quantum operators.
 
 This module contains classes to define 'bra' and 'ket' objects as well as
@@ -19,7 +22,8 @@ Notes
 -----
     - Objects cannot be pickled due to presence of lambda functions.
     - Partial contraction of bra and ket (e.g. for partial trace) not yet
-    implemented.
+      implemented.
+    
 """
 
 #!/usr/bin/env python3
@@ -403,7 +407,7 @@ class ket(qvec):
     """
     Creates an object to represent a ket.
     
-    This is a child class of qvec where many of the vector space and inner 
+    This is a child class of :class:`qvec` where many of the vector space and inner 
     operations on kets are defined. Methods that are specific to ket's are 
     defined here.
     
@@ -412,7 +416,7 @@ class ket(qvec):
     type : str
         value is 'ket'
     vec : dict
-        inherited from qvec. All ket's are represented by a dictionary that
+        inherited from :class:`qvec`. All ket's are represented by a dictionary that
         gives the coefficients of each basis state that makes up the object.
         The the set of indices of each basisstate are the keys of this
         dictionary.
@@ -423,11 +427,11 @@ class ket(qvec):
         """
         Initialize a new instance of ket.
         
-        Constructor for ket's inherits from qvecs. type is set to 'ket'.
+        Constructor for ket's inherits from :class:`qvecs`. type is set to 'ket'.
 
         Parameters
         ----------
-        basisstate : list, tuple, string or a qvec, optional
+        basisstate : list, tuple, string or a :class:`qvec`, optional
             indices or list of indices for basis state(s). The default is None.
         cnum : int, float or complex, or iterable of these, optional
             complex coefficients for basis states. The default is 1.
@@ -465,8 +469,9 @@ class ket(qvec):
         Left multiplication.
         
         Multiplication rule of a scalar or a bra by the ket.
-        Scalar multiplication inherits fro qvec class. Multiplication a bra
-        is the outer product which gives an operator (qop object)
+        Scalar multiplication inherits from :class:`qvec` class. Multiplication
+        with a :class:`bra` is the outer product which gives an operator 
+        (:class:`qop` object)
 
         Parameters
         ----------
@@ -475,9 +480,9 @@ class ket(qvec):
 
         Returns
         -------
-        output : ket or qop
+        output : :class:`ket` or :class:`qop` object.
             If multiplier is a scalar then a ket is returnes. If multiplier is
-            a bra then a qop is returned.
+            a :class:`bra` then a :class:`qop` is returned.
 
         """
         if isinstance(other, (int, float, complex)):
@@ -501,13 +506,13 @@ class ket(qvec):
         """
         Right multiplication.
         
-        Right multiplication be either a scalar or a bra. When the multiplier
-        is a scalar then multiplication rule inherits from qvec. If multiplier
-        is bra then the inner product is given, returning a scalar.
+        Right multiplication be either a scalar or a :class:`bra`. When the multiplier
+        is a scalar then multiplication rule inherits from :class:`qvec`. If multiplier
+        is :class:`bra` then the inner product is given, returning a scalar.
 
         Parameters
         ----------
-        other : int, float, complex, bra
+        other : int, float, complex, :class:`bra`
             multiplier.
 
         Returns
@@ -532,11 +537,12 @@ class ket(qvec):
         """
         Hermitian conjugate.
         
-        Defines conjugation of the ket - turning the ket into a bra
+        Defines conjugation of the :class:`ket` object - turning the ket into 
+        a bra
 
         Returns
         -------
-        conj_bra : bra
+        conj_bra : :class:`bra`
             The conjugate bra to this ket.
 
         """
@@ -548,18 +554,18 @@ class ket(qvec):
 #%% bra
 class bra(qvec):
     """
-    Creates an object to represent a ket.
+    Creates an object to represent a bra.
     
-    This is a child class of qvec where many of the vector space and inner 
-    operations on kets are defined. Methods that are specific to bra's are 
-    defined here.
+    This is a child class of :class:`qvec` where many of the vector space and 
+    inner operations on bra's are defined. Methods that are specific to bra's 
+    are defined here.
     
     Attributes
     ----------
     type : str
         value is 'bra'
     vec : dict
-        inherited from qvec. All ket's are represented by a dictionary that
+        inherited from :class:`qvec`. All ket's are represented by a dictionary that
         gives the coefficients of each basis state that makes up the object.
         The the set of indices of each basisstate are the keys of this
         dictionary.
@@ -572,7 +578,7 @@ class bra(qvec):
 
         Parameters
         ----------
-        basisstate : list, tuple, string or a qvec, optional
+        basisstate : list, tuple, string or a :class:`qvec`, optional
             indices or list of indices for basis state(s). The default is None.
         cnum : int, float or complex, or iterable of these, optional
             complex coefficients for basis states. The default is 1.
@@ -587,11 +593,11 @@ class bra(qvec):
         
     def new_instance(self, basisstate = None, cnum=1):
         """
-        Return new instance of a bra.
+        Return new instance of a :class:`bra`.
 
         Parameters
         ----------
-        basisstate : list, tuple, string or a qvec, optional
+        basisstate : list, tuple, string or a :class:`qvec` object, optional
         cnum : int, float or complex, or iterable of these, optional
         
         Returns
