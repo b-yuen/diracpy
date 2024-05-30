@@ -464,6 +464,78 @@ class qsys:
             term_matrix = self.matrix(term_op)
             hmatrix += term_matrix
         return hmatrix
+    
+    def vectorize(self, q_obj):
+        """
+        Vectorise bra, ket, or qop.
+        
+        Turns bra's and ket's into 1d numpy arrays, and qop into a 2d numpy
+        array representing its matrix in the basis `self.basis`.
+
+        Parameters
+        ----------
+        q_obj : :class:`diracpy.states_operators.ket`, :class:`diracpy.states_operators.bra`, or :class:`diracpy.states_operators.qop`
+            ket, bra or qop to vectorise.
+
+        Returns
+        -------
+        numpy.ndarray
+            1d (vector) array if `ket` or `bra` is arguement. 2d (matrix) array
+            when arguement is a `qop`.
+
+        """
+        if type(q_obj) in [ket, bra]:
+            _vectorize = self.vector
+        elif type(q_obj) == qop:
+            _vectorize = self.matrix
+        elif type(q_obj) == np.ndarray:
+            _vectorize = lambda x : x
+        else:
+            raise TypeError("argument must be ket, bra, qop or numpy.ndarray")
+        return _vectorize(q_obj)
+            
+    
+    def vector(self, qvec):
+        """
+        Turn bra or ket into vector.
+        
+        Vectorise input object in self.basis
+
+        Parameters
+        ----------
+        qvec : :class:`diracpy.states_operators.ket` or :class:`diracpy.states_operators.bra`
+            Input ket or bra.
+
+        Raises
+        ------
+        TypeError
+            When input is neither ket or bra.
+
+        Returns
+        -------
+        vector_out : np.ndarray
+            1d numpy array of type complex, and lenght self.dim.
+        """
+        if qvec.type == 'ket':
+            vector_out = self._ket_vec(qvec)
+        elif qvec.type == 'bra':
+            vector_out = self._bra_vec(qvec)
+        else:
+            raise TypeError('''To vectorize qvec  it must be either 
+                            a ket or bra.''')
+        return vector_out
+    
+    def _ket_vec(self, ket):
+        vec = np.zeros(self.dim, complex)
+        for i, basis_bra in enumerate(self.adjoint_basis):
+            vec[i] = basis_bra * ket
+        return vec
+            
+    def _bra_vec(self, bra):
+        vec = np.zeros(self.dim, complex)
+        for i, basis_ket in enumerate(self.basis):
+            vec[i] = bra * basis_ket
+        return vec
             
     def matrix(self, operator):
         """
@@ -471,7 +543,7 @@ class qsys:
         
         Returns a matrix for the given :class:`diracpy.states_operators` 
         operator in the basis constructed for the qsys instance.
-
+        
         Parameters
         ----------
         operator : :class:`diracpy.states_operators`
