@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 r"""Solves quantum dyanmics.
 
-Solves quantum dyanmics of :mod:`quantum systems <diracpy.quantum_system>`
+Solves quantum dyanmics of :mod:`quantum systems <diracpy.quantum_systems>`
 objects. Multiple dyanmical models are given by the different
 classes in this module. Each class shares a commont interface comprising of
 initial state, a list of times to solve the dynamics for, and the 
-:class:`diracpyt.quantum_systems.qsys` object that describes the system.
+:class:`diracpy.quantum_systems.qsys` object that describes the system.
 The inital state is either the inital state vector or the density matrix, 
 depending on the dynamical model. In both cases, these should be vectorised
 in the basis constructed by the given :class:`diracpyt.quantum_systems.qsys` 
 object. For systems with a time dependent hamiltonian, a 
-:class:`diracpyt.quantum_systems.qsys_t` object is given instead.
+:class:`diracpy.quantum_systems.qsys_t` object is given instead.
 In this case only dynamical models that use scipy.integrate.odeint rather
 matrix diagonalisatin should be used -- that are the :class:`vonneumannint`, 
 :class:`lindbladint`,  :class:`schrodint` or :class:`quantumjumps` models.
@@ -27,6 +27,9 @@ Classes
     liouville
 """
 
+
+# Things to do:
+# Make lindblad a inherit from vonneuman int.
 
 # This script defines classes which can be used to
 # numerically solve quantum dynamics
@@ -67,32 +70,126 @@ import time
 #         self.y0 = self.y0matrix.reshape(self.vdim)
 
 class vonneumannint:
+    """
+    Solve von Neumann equation.
     
-    def __init__(self, z0, t, ham_obj):
-        self.z0 = z0
+    Solves the dynamics for a given :class:`diracpy.quantum_systems.qsys` object
+    by numerically integrating the von Neumann equation.
+    
+    Attributes
+    ----------
+    t : numpy.ndarray
+        1d array of times to solve the system for.
+    qsys : :class:`diracpy.quantum_systems.qsys`
+        The qsys object that describes the quantum system to be solved
+    rho : numpy.ndarray
+        2d array representing the initial density matrix of the system in the
+        basis given by qsys. If the initial density operator is given as
+        a :class:`diracpy.states_operators.qop` object then the density
+        matrix is generated using the `qsys.vectorize` method.
+    soln : numpy.ndarray
+        3d array containing the density matrices of the solved system for
+        each time of the attribute `t`.
+    """
+    
+    def __init__(self, rho0, t, qsys, solve=True):
+        """
+        Solve von Neumann equation.
+        
+        Initialises the object and solves the system for the intial density
+        operator rho0, at each time in t. The system is solve by expanding
+        the von Neumann equation into an equivalent set of coupled ODEs which
+        are then solved using `scipy.integrate.odeint <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.odeint.html>`_.
+
+        Parameters
+        ----------
+        rho0 : :class:`diracpy.states_operators.qop` or numpy.ndarray
+            Initial density operator or density matrix of the system.
+        t : numpy.ndarray
+            1D array of times (`int` or `float`) to solve the system for.
+        qsys : :class:`diracpy.quantum_systems.quantum_system`
+            Quantum system to solve, which contains all information on the
+            Hamiltonian and the basis used for the calculation.
+        solve : bool, optional
+            System solved on initialisation if True, and not solved otherwise.
+            The default is True.
+
+        Returns
+        -------
+        None.
+        """
+        # setup simulation
         self.t = t
-        self.ham = ham_obj
-        self.y0matrix = self.c2rmatrix(self.z0)
-        self.rhmatrix = self.c2rmatrix(-1.j * self.ham.hmatrix)
-        if 'pumpmatrices' in self.ham.__dict__:
-            self.rpumpmatrices = tuple([self.c2rmatrix(-1.j * self.ham.pumpmatrices[i]) for i in range(self.ham.numatoms)])
-            for k in range(self.ham.numatoms):
-                self.rhmatrix += self.ham.rabis[k] * self.rpumpmatrices[k]
+        self.qsys = qsys
+        self._generate_rhmatrix()
+        # define dimensions for equivalent real variable system
+        self._dim = self.qsys.dim
+        self._mshape = (2 * self._dim, 2 * self._dim)
+        self._vdim = (2 * self._dim) ** 2
+        # define initial state
+        self.set_initial_state(rho0)
+        self._y0matrix = self._c2rmatrix(self.rho0)
+        self._y0 = self._y0matrix.reshape(self._vdim)
+        # solve
+        if solve:
+            self.solve()
+            
+    def set_initial_state(self, rho0):
+        """
+        Define initial state.
         
-        self.vdim = np.size(self.rhmatrix)
-        self.mshape = np.shape(self.rhmatrix)
-#         self.dim = np.shape(hmatrix)[0]
-        self.dim = self.ham.dim
+        Define the initial condition of the von Neumann equation given by
+        the inital density matrix of density operator.
+
+        Parameters
+        ----------
+        rho0 : :class:`diracpy.states_operators.qop` or numpy.ndarray
+            Initial density operator or density matrix of the system.
+
+        Returns
+        -------
+        None.
+        """
+        try:
+            rho = self.qsys.vectorize(rho0)
+        except AttributeError:
+            # handles depricated qsys functionality where qsys was an object
+            # describing the Hamiltonian but had no method vectorize.
+            rho = rho0
+        self.rho0 = rho
         
-        self.y0 = self.y0matrix.reshape(self.vdim)
+    def solve(self):
+        """
+        Solve system.
         
-        self.realsoln = odeint(self.derivs, self.y0, self.t, args = (self.rhmatrix,))
-#         self.realsoln = odeint(self.derivs, self.y0, self.t, 
-#                                args = (self.rhmatrix, self.rpumpmatrices, 
-#                                        self.ham.rabis, self.ham.numatoms))
-        self.soln = self.rvec2cmatrixsoln()
+        Solves the system for array of times, `t`, using
+        `scipy.integrate.odeint <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.odeint.html>`_.
+        The solution is an array of density matrices. These are stored in
+        the `soln` attribute which is a 3d numpy.ndarray.
+        
+        Returns
+        -------
+        None.
+        """
+        realsoln = odeint(self._derivs, self._y0, self.t)
+        self.soln = self._rvec2cmatrixsoln(realsoln)
+        
+    def _generate_rhmatrix(self):
+        self._rhmatrix = self._c2rmatrix(-1.j * self.qsys.hmatrix)
+        
+        if 'pumpmatrices' in self.qsys.__dict__:
+            self._rhmatrix = self._append_pump(self._rhmatrix)
+                
+    def _append_pump(self, rhmatrix):
+        # depricated - used in predecessor or diracpy - kept for backwards
+        # compatibility
+        rhmatrix_out = rhmatrix
+        rpumpmatrices = tuple([self._c2rmatrix(-1.j * self.qsys.pumpmatrices[i]) for i in range(self.qsys.numatoms)])
+        for k in range(self.qsys.numatoms):
+            rhmatrix_out += self.qsys.rabis[k] * rpumpmatrices[k]
+        return rhmatrix_out
     
-    def c2rmatrix(self, matrix):
+    def _c2rmatrix(self, matrix):
         dim = np.shape(matrix)[0]
 #         Should be a square matrix. May want to put in some error handling
         realm = np.zeros([2*dim,2*dim])
@@ -104,22 +201,18 @@ class vonneumannint:
                 realm[2*i+1,2*j+1] = np.real(matrix[i,j])
         return realm
     
-#     def derivs(self, y, t, rhmatrix, rpumpmatrices, rabis, numatoms):
-    def derivs(self, y, t, rhmatrix):
-        ym = y.reshape(self.mshape)
-#         local_rhmatrix = rhmatrix
-#         for k in range(numatoms):
-#             local_rhmatrix += rabis[k] * rpumpmatrices[k]
-        derivs = ( rhmatrix @ ym - ym @ rhmatrix)
-        return derivs.reshape(self.vdim)
+    def _derivs(self, y, t):
+        ym = y.reshape(self._mshape)
+        derivs = ( self._rhmatrix @ ym - ym @ self._rhmatrix)
+        return derivs.reshape(self._vdim)
     
-    def rvec2cmatrixsoln(self):
-        nrows, ncols = np.shape(self.realsoln)
-        csoln = np.zeros([nrows, self.dim, self.dim], complex)
-        realsoln = self.realsoln.reshape(nrows, 2 * self.dim, 2 * self.dim)
+    def _rvec2cmatrixsoln(self, realsoln):
+        nrows, ncols = np.shape(realsoln)
+        csoln = np.zeros([nrows, self._dim, self._dim], complex)
+        realsoln = realsoln.reshape(nrows, 2 * self._dim, 2 * self._dim)
         for i in range(nrows):
-            for j in range(self.dim):
-                for k in range(self.dim):
+            for j in range(self._dim):
+                for k in range(self._dim):
                     csoln[i, j, k] = realsoln[i, 2*j, 2*k] + 1.j * realsoln[i, 2*j, 2*k+1]            
         return csoln
 
@@ -187,21 +280,8 @@ class lindbladint:
 #            t_key = tau
 #        return rabi_dictionary[t_key]
         
-    def solve(self):
-#         self.rabis = []
-#         for k in range(self.ham.numatoms):
-#             rabidictionary = {}
-#             for t in range(self.t):
-#                 rabidictionary[t] = self.ham.rabis[k]
-#             self.rabis += [rabidictionary] 
-
-#         self.rabi_t()
-        
+    def solve(self):      
         self.realsoln = odeint(self.derivs, self.y0, self.t)
-#         self.realsoln = odeint(self.derivs, self.y0, self.t, 
-#                                args = (self.rhmatrix, self.rpumpmatrices, 
-#                                        self.rabis, self.ham.numatoms,))
-#         self.realsoln = odeint(self.derivs, self.y0, self.t, args = (self.rhmatrix,))
         self.soln = self.rvec2cmatrixsoln()
         
     
@@ -217,27 +297,28 @@ class lindbladint:
                 realm[2*i+1,2*j+1] = np.real(matrix[i,j])
         return realm
     
-    def com(self, matrix1, matrix2):
+    def _com(self, matrix1, matrix2):
         return matrix1 @ matrix2 - matrix2 @ matrix1
     
-    def acom(self, matrix1, matrix2):
+    def _acom(self, matrix1, matrix2):
         return matrix1 @ matrix2 + matrix2 @ matrix1
     
-    def lindbladsops(self, ym, raisingm, loweringm, gamma):
-        return gamma * ( loweringm @ ym @ raisingm - 0.5 * self.acom( raisingm @ loweringm, ym))
+    def _lindbladsops(self, ym, raisingm, loweringm, gamma):
+        return gamma * ( loweringm @ ym @ raisingm - 0.5 * 
+                        self._acom( raisingm @ loweringm, ym))
     
     def derivs(self, y, t):
         ym = y.reshape(self.mshape)
-        sysderivs = self.com(self.c2rmatrix(-1.j * self.ham.ham(t)), ym)
+        sysderivs = self._com(self.c2rmatrix(-1.j * self.ham.ham(t)), ym)
 #        For time independent Hamiltonians it is faster to use the following
-#        sysderivs = self.com(self.rihmatrix, ym)
+#        sysderivs = self._com(self.rihmatrix, ym)
         
         lindbladderivs = np.zeros(self.mshape)
         for i in self.ham.lindbladgamma:
             gamma = self.ham.lindbladgamma[i]
             rrm = self.c2rmatrix(self.ham.lindbladraising[i])
             rlm = self.c2rmatrix(self.ham.lindbladlowering[i])
-            lindbladderivs += self.lindbladsops(ym, rrm, rlm, gamma)
+            lindbladderivs += self._lindbladsops(ym, rrm, rlm, gamma)
             
         derivs = sysderivs + lindbladderivs
 #         derivs = sysderivs
