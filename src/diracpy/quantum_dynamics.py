@@ -12,7 +12,7 @@ import numpy as np
 import scipy
 from scipy.integrate import odeint
 from random import random
-from multiprocessing import Pool
+# from multiprocessing import Pool
 import time
 
 # The vonneumannint class numerically integrates the vonneumann equation
