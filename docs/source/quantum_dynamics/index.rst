@@ -8,5 +8,6 @@ Quantum Dynamics
    :caption: Contents:
 
    vonneumann
+   lindbladint
 
 .. automodule:: diracpy.quantum_dynamics

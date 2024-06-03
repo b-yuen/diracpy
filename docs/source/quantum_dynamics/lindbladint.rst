@@ -1,9 +1,9 @@
-von Neumann integrate
----------------------
+Lindblad integrate
+------------------
 
 .. currentmodule:: diracpy.quantum_dynamics
 
-.. autoclass:: diracpy.quantum_dynamics.vonneumannint
+.. autoclass:: diracpy.quantum_dynamics.lindbladint
    :members:
    :inherited-members:
    :show-inheritance:

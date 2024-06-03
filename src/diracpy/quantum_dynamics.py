@@ -40,6 +40,7 @@ from scipy.integrate import odeint
 from random import random
 from multiprocessing import Pool
 import time
+import diracpy.quantum_systems
 
 # The vonneumannint class numerically integrates the vonneumann equation
 # using odeint. A Hamiltonian matrix and the initial value of the density
@@ -107,7 +108,7 @@ class vonneumannint:
             Initial density operator or density matrix of the system.
         t : numpy.ndarray
             1D array of times (`int` or `float`) to solve the system for.
-        qsys : :class:`diracpy.quantum_systems.quantum_system`
+        qsys : :class:`diracpy.quantum_systems.qsys`
             Quantum system to solve, which contains all information on the
             Hamiltonian and the basis used for the calculation.
         solve : bool, optional
@@ -175,7 +176,8 @@ class vonneumannint:
         self.soln = self._rvec2cmatrixsoln(realsoln)
         
     def _generate_rhmatrix(self):
-        self._rhmatrix = self._c2rmatrix(-1.j * self.qsys.hmatrix)
+        # self._rhmatrix = self._c2rmatrix(-1.j * self.qsys.hmatrix)
+        self._rhmatrix = self._c2rmatrix(-1.j * self.qsys.ham(0))
         
         if 'pumpmatrices' in self.qsys.__dict__:
             self._rhmatrix = self._append_pump(self._rhmatrix)
@@ -201,9 +203,22 @@ class vonneumannint:
                 realm[2*i+1,2*j+1] = np.real(matrix[i,j])
         return realm
     
+    def _com(self, matrix1, matrix2):
+        return matrix1 @ matrix2 - matrix2 @ matrix1
+    
+    # def _derivs(self, y, t):
+    #     ym = y.reshape(self._mshape)
+    #     derivs = ( self._rhmatrix @ ym - ym @ self._rhmatrix)
+    #     return derivs.reshape(self._vdim)
+    
     def _derivs(self, y, t):
         ym = y.reshape(self._mshape)
-        derivs = ( self._rhmatrix @ ym - ym @ self._rhmatrix)
+        if type(self.qsys) == diracpy.quantum_systems.qsys:
+            derivs = self._com(self._rhmatrix, ym)
+        else:
+            derivs = self._com(self._c2rmatrix(-1.j * self.qsys.ham(t)), ym)
+#        For time independent Hamiltonians it is faster to use the following
+#        derivs = self._com(self.rihmatrix, ym)
         return derivs.reshape(self._vdim)
     
     def _rvec2cmatrixsoln(self, realsoln):
@@ -235,67 +250,69 @@ class vonneumannint:
 # indexing for this dictionary should correspond with indexing for the
 # ham_obj.lindbladgamma and ham_obj.lindbladraising dictionaries.
         
-class lindbladint:
+class lindbladint(vonneumannint):
+    """
+    Solve Lindblad master equation.
     
-    def __init__(self, z0, t, ham_obj):
-        self.z0 = z0
-        self.t = t
-        self.ham = ham_obj
-        self.y0matrix = self.c2rmatrix(self.z0)
-#        self.rihmatrix = self.c2rmatrix(-1.j * self.ham.ham(0))
-#         self.rhmatrix = self.c2rmatrix(-1.j * self.ham.hmatrix)
-#         self.rpumpmatrices = tuple([self.c2rmatrix(-1.j * self.ham.pumpmatrices[i]) for i in range(self.ham.numatoms)])
+    Solves the dynamics for a given :class:`diracpy.quantum_systems.qsys` or
+    the :class:`diracpy.quantum_systems.qsys_t` object
+    by numerically integrating the Lindblad master equation using 
+    `scipy.integrate.odeint <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.odeint.html>`_.
+    This class
+    inherits from :class:`vonneumannint` due to the similarity between these
+    equations of motion. The differences are: (1) that :class:`lindbladint`
+    accomodates open quantum systems by including the optional jump_ops
+    when initialising the quantum system 
+    (see documentation :mod:`diracpy.quantum_systems`), and (2) that 
+    :class:`time dependent systems <diracpy.quantum_systems.qsys_t>`
+    can be solved with class. Note that the system is not solved on
+    initililsation here --  the solve method must subsequently be used.
+    
+    Attributes
+    ----------
+    t : numpy.ndarray
+        1d array of times to solve the system for.
+    qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
+        The qsys object that describes the quantum system to be solved
+    rho : numpy.ndarray
+        2d array representing the initial density matrix of the system in the
+        basis given by qsys. If the initial density operator is given as
+        a :class:`diracpy.states_operators.qop` object then the density
+        matrix is generated using the `qsys.vectorize` method.
+    soln : numpy.ndarray
+        3d array containing the density matrices of the solved system for
+        each time of the attribute `t`.
+    
+    """
+    
+    def __init__(self, rho0, t, qsys):
+        """
+        Initialise the Lindblad equation solver.
         
-#         self.vdim = np.size(self.rhmatrix)
-#         self.mshape = np.shape(self.rhmatrix)
-        self.dim = self.ham.dim
-        self.mshape = (2 * self.dim, 2 * self.dim)
-        self.vdim = (2 * self.dim) ** 2
+        Initialises the object with the intial density
+        operator rho0, a list of times to solve for, and the
+        quantum system to be solved. This sets up the set of coupled
+        ordinary differential equations equivalent to the Lindblad
+        master equation.
         
-        self.y0 = self.y0matrix.reshape(self.vdim)
-        
-#         self.generate_rabis()
-        
-#     def rabi_t(self):
-#         self.rabis = []
-#         for k in range(self.ham.numatoms):
-#             rabidictionary = {}
-#             for t in self.t:
-#                 rabidictionary[t] = self.ham.rabis[k]
-#             self.rabis += [rabidictionary]
+        Parameters
+        ----------
+        rho0 : :class:`diracpy.states_operators.qop` or numpy.ndarray
+            Initial density operator or density matrix of the system.
+        t : numpy.ndarray
+            1D array of times (`int` or `float`) to solve the system for.
+        qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
+            Quantum system to solve, which contains all information on the
+            Hamiltonian and the basis used for the calculation.
+        solve : bool, optional
+            System solved on initialisation if True, and not solved otherwise.
+            The default is True.
 
-#    def generate_rabis(self):
-#        self.rabis = []
-#        for k in range(self.ham.numatoms):
-#            rabidictionary = {0 : self.ham.rabis[k]}
-#            self.rabis += [rabidictionary]
-#
-#    def lookup_rabi(self, t, rabi_dictionary):
-#        change_times = list(rabi_dictionary.keys())
-#    #     change_times.sort() # uncomment if times are not sorted
-#        t_key = change_times[0]
-#        for tau in change_times:
-#            if t < tau:
-#                break
-#            t_key = tau
-#        return rabi_dictionary[t_key]
-        
-    def solve(self):      
-        self.realsoln = odeint(self.derivs, self.y0, self.t)
-        self.soln = self.rvec2cmatrixsoln()
-        
-    
-    def c2rmatrix(self, matrix):
-        dim = np.shape(matrix)[0]
-#         Should be a square matrix. May want to put in some error handling
-        realm = np.zeros([2*dim,2*dim])
-        for i in range(dim):
-            for j in range(dim):
-                realm[2*i,2*j] = np.real(matrix[i,j])
-                realm[2*i,2*j+1] = -np.imag(matrix[i,j])
-                realm[2*i+1,2*j] = np.imag(matrix[i,j])
-                realm[2*i+1,2*j+1] = np.real(matrix[i,j])
-        return realm
+        Returns
+        -------
+        None.
+        """
+        super().__init__(rho0, t, qsys, solve=False)
     
     def _com(self, matrix1, matrix2):
         return matrix1 @ matrix2 - matrix2 @ matrix1
@@ -307,36 +324,38 @@ class lindbladint:
         return gamma * ( loweringm @ ym @ raisingm - 0.5 * 
                         self._acom( raisingm @ loweringm, ym))
     
-    def derivs(self, y, t):
-        ym = y.reshape(self.mshape)
-        sysderivs = self._com(self.c2rmatrix(-1.j * self.ham.ham(t)), ym)
+    def _derivs(self, y, t):
+        ym = y.reshape(self._mshape)
+        if type(self.qsys) == diracpy.quantum_systems.qsys:
+            sysderivs = self._com(self._rhmatrix, ym)
+        else:
+            sysderivs = self._com(self._c2rmatrix(-1.j * self.qsys.ham(t)), ym)
+        # sysderivs = self._com(self._c2rmatrix(-1.j * self.qsys.ham(t)), ym)
 #        For time independent Hamiltonians it is faster to use the following
 #        sysderivs = self._com(self.rihmatrix, ym)
         
-        lindbladderivs = np.zeros(self.mshape)
-        for i in self.ham.lindbladgamma:
-            gamma = self.ham.lindbladgamma[i]
-            rrm = self.c2rmatrix(self.ham.lindbladraising[i])
-            rlm = self.c2rmatrix(self.ham.lindbladlowering[i])
+        lindbladderivs = np.zeros(self._mshape)
+        for i in self.qsys.lindbladgamma:
+            gamma = self.qsys.lindbladgamma[i]
+            rrm = self._c2rmatrix(self.qsys.lindbladraising[i])
+            rlm = self._c2rmatrix(self.qsys.lindbladlowering[i])
             lindbladderivs += self._lindbladsops(ym, rrm, rlm, gamma)
             
         derivs = sysderivs + lindbladderivs
-#         derivs = sysderivs
-        return derivs.reshape(self.vdim)
-    
-    def rvec2cmatrixsoln(self):
-        nrows, ncols = np.shape(self.realsoln)
-        csoln = np.zeros([nrows, self.dim, self.dim], complex)
-        realsoln = self.realsoln.reshape(nrows, 2 * self.dim, 2 * self.dim)
-        for i in range(nrows):
-            for j in range(self.dim):
-                for k in range(self.dim):
-                    csoln[i, j, k] = realsoln[i, 2*j, 2*k] + 1.j * realsoln[i, 2*j, 2*k+1]            
-        return csoln
+        return derivs.reshape(self._vdim)
 
             
     
 class schrodint:
+    """
+    Solve the Schrodinger equation.
+    
+    This class solves the Schrodinger equation given an initial wavevector
+    psi0, a list of times t, and a :class:`diracpy.quantum_systems.qsys` 
+    or :class:`diracpy.quantum_systems.qsys_t` object that contains the
+    hamiltonian and system basis.
+    """
+    
     # This class solves the Schrodinger equation given an initial wavevector
     # psi0, a list of times t, and a hamiltonian object.
     # The Hamiltonian object must
@@ -352,13 +371,36 @@ class schrodint:
     # indexing for this dictionary should correspond with indexing for the
     # ham_obj.lindbladgamma and ham_obj.lindbladraising dictionaries.
     def __init__(self, psi0, t, ham_obj):
-        self.psi0 = psi0
+        # self.psi0 = psi0
         self.t = t
         self.ham = ham_obj
+        # system dimension
         self.dim = self.ham.dim
-        self.y0 = self.c2r(self.psi0)
+        # Static Hamiltonian matrix in equivalent real system of equations
         self.rhmatrix = self.c2r(-1.j * self.ham.ham(0))
+        # number of timesteps
         self.ntimes = len(self.t)
+        # define initial state
+        self.set_initial_state(psi0)
+        self.y0 = self.c2r(self.psi0)
+    
+    def set_initial_state(self, psi0):
+        """
+        Define initial state.
+        
+        Define the initial condition of the Schrodinger equation given by
+        the inital state vector, `psi0`.
+
+        Parameters
+        ----------
+        psi0 : :class:`diracpy.states_operators.ket` or numpy.ndarray
+            Initial state vector of the system.
+
+        Returns
+        -------
+        None.
+        """
+        self.psi0 = self.ham.vectorize(psi0)
     
     def solve(self):    
         self.realsoln = odeint(self.derivs, self.y0, self.t, args = (self.rhmatrix,))
@@ -403,8 +445,9 @@ class schrodint:
         return derivs
         
     def reformatsolution(self, real_soln):
-        n_times = len(real_soln)
-        complex_soln = np.zeros([n_times, self.dim], complex)
+        # n_times = len(real_soln)
+        # complex_soln = np.zeros([n_times, self.dim], complex)
+        complex_soln = np.zeros([self.ntimes, self.dim], complex)
         for i, c_vector in enumerate(complex_soln):
             for j in range(self.dim):
                 c_vector[j] = real_soln[i,2*j] + 1.j * real_soln[i,2*j+1]
@@ -551,6 +594,8 @@ class quantumjumps(schrodint):
                 psi_array[k] = tpsi_amps
                 # reset counter which marks the index of the last quantum jump
                 t_q_index = k
+                # Update eta for next quantum jump
+                eta = random()
         # returns quantum trajectory
         return psi_array
     
