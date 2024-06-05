@@ -37,7 +37,8 @@ Classes
 import numpy as np
 import scipy
 from scipy.integrate import odeint
-from random import random
+#from random import random
+import random
 from multiprocessing import Pool
 import time
 import diracpy.quantum_systems
@@ -447,11 +448,21 @@ class schrodint:
     def reformatsolution(self, real_soln):
         # n_times = len(real_soln)
         # complex_soln = np.zeros([n_times, self.dim], complex)
-        complex_soln = np.zeros([self.ntimes, self.dim], complex)
+        ntimes = len(real_soln)
+        complex_soln = np.zeros([ntimes, self.dim], complex)
         for i, c_vector in enumerate(complex_soln):
             for j in range(self.dim):
                 c_vector[j] = real_soln[i,2*j] + 1.j * real_soln[i,2*j+1]
         return complex_soln
+    
+class _counter:
+    def __init__(self, start=0):
+        self.i = start
+        
+    def __call__(self):
+        value = self.i
+        self.i += 1
+        return value
     
 class quantumjumps(schrodint):
     # This class can be used to solve the quantm dynamics in an open quantum 
@@ -473,13 +484,15 @@ class quantumjumps(schrodint):
     # the lindblad terms represented by n by n matrices using numpy arrays. Again,
     # indexing for this dictionary should correspond with indexing for the
     # ham_obj.lindbladgamma and ham_obj.lindbladraising dictionaries.
-    def __init__(self, psi0, t, ham_obj, **kwargs):
+    def __init__(self, psi0, t, ham_obj, test=False, **kwargs):
         super().__init__(psi0, t, ham_obj)
         self.generate_nonhermitian_ham()
         self.t_max = self.t[-1]
         # Initiallise a dictionary of basis state wavevectors
         self.bstate_evolution = np.zeros([self.dim, self.ntimes, self.dim], complex)
         self.sampleratio = kwargs.pop('sampleratio', 1)
+        self._random = self._random_generator(test)
+        # self._test_mode(test)
         
     def gen_bstate_evolution(self, **kwargs):
         # Before calculating the quantum trajectory from a given initial wavevector,
@@ -533,7 +546,7 @@ class quantumjumps(schrodint):
 #        return self.deterministic_evolve(real_psi0, self.t[0])
         return soln
     
-    def bstate_i_long_evolution(self, i):
+    def bstate_i_long_evolution(self, i, verbose=False):
         t1 = time.time()
         tstep = self.t[1] - self.t[0]
         times = np.linspace(0, tstep, self.sampleratio + 1)
@@ -549,10 +562,31 @@ class quantumjumps(schrodint):
             real_psi0 = realsoln[-1]
             downsampled_soln[j+1] = soln[-1]
         t2 = time.time()
-        print("bstate {0} evolution calculated in {1} seconds".format(i, t2-t1))
+        if verbose:
+            print("bstate {0} evolution calculated in {1} seconds".format(i, t2-t1))
         return downsampled_soln
             
+    # def _test_mode(self, test):
+    #     self.test = test
+    #     if test:
+    #         self._seed_generator = _counter()
+    #     else:
+    #         pass
             
+    # def _generate_eta(self):
+    #     if self.test:
+    #         eta = random([self._seed_generator()])
+    #     else:
+    #         eta = random()
+    #     return eta
+
+    def _random_generator(self, test):
+        random_generator = random.Random()
+        if test:
+            random_generator.seed(0)
+        else:
+            pass
+        return random_generator
             
             
     def quantum_trajectory(self, bstate_evolution):
@@ -563,7 +597,8 @@ class quantumjumps(schrodint):
         # t_q_index is the index of the last quantum jump and is initially set to zero.
         t_q_index = 0
         # eta is a random variable [0,1] used to decide whether a jump has happened.
-        eta = random()
+        # eta = random()
+        eta = self._random.random()
         # initiallise array that describes the quantum trajectory.
         psi_array = np.zeros([self.ntimes, self.dim], complex)
         psi_array[0] = self.psi0
@@ -595,7 +630,8 @@ class quantumjumps(schrodint):
                 # reset counter which marks the index of the last quantum jump
                 t_q_index = k
                 # Update eta for next quantum jump
-                eta = random()
+                # eta = random()
+                eta = self._random.random()
         # returns quantum trajectory
         return psi_array
     
@@ -670,7 +706,8 @@ class quantumjumps(schrodint):
         while i < len(cumulative_prob):
             cumulative_prob[i] += cumulative_prob[i-1]
             i += 1
-        x = random()
+        # x = random()
+        x = self._random.random()
         i = 0
         cp = cumulative_prob[i]
         while x > cp:

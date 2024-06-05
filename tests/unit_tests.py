@@ -745,19 +745,19 @@ class unittest_dynamics(unittest_base):
             return False, "Schrodint Test: Fail"
         
     def quantumjumps_test(self, tol=1e-8):
-        rho_0_qj = np.array([1,0,0])
-        """
-        TO BE IMPLEMENTED
-        soln = dp.liouville(rho_0_qj, self.times, self.sys2)
-        soln.solve()
-        cav_pop = np.real(soln.soln[:,0])[-1]
-        test = self.error_tol(cav_pop, 2.315584825739848e-27,tol)
+        psi_0_qj = np.array([0,1,0])
+        times = np.linspace(0,5e-14,100)
+        jpsolve = dp.quantumjumps(psi_0_qj, times, self.sys2, test=True)
+        # Deterministic evolution of basis states
+        jpsolve.gen_bstate_evolution()
+        # Monte Carlo simulation
+        mean_rho = jpsolve.calc_rho(100)[0]
+        cav_pop = np.real(mean_rho[-1,0,0])
+        test = self.error_tol(cav_pop, 0.017304829099494597,tol)
         if test:
             return True, "Pass"
         else:
             return False, "Quantum Jumps Test: Fail"
-        """
-        return True, "Not Implemented"
     
 class unit_test(unittest_qop, unittest_innerproduct, unittest_vector, 
                 unittest_dynamics):
