@@ -404,7 +404,8 @@ class schrodint:
         self.psi0 = self.qsys.vectorize(psi0)
     
     def solve(self):    
-        self.realsoln = odeint(self._derivs, self._y0, self.t, args = (self._rhmatrix,))
+        # self.realsoln = odeint(self._derivs, self._y0, self.t, args = (self._rhmatrix,))
+        self.realsoln = odeint(self._derivs, self._y0, self.t)
         self.soln = self._reformatsolution(self.realsoln)
     
     def _c2rmatrix(self, matrix):
@@ -439,8 +440,13 @@ class schrodint:
             rarray = self._c2rvector(array)
         return rarray
     
-    def _derivs(self, y, t, rhmatrix):
-        derivs = rhmatrix @ y
+    def _derivs(self, y, t):
+        derivs = self._rhmatrix @ y
+        if type(self.qsys) == diracpy.quantum_systems.qsys:
+            derivs = self._rhmatrix @ y
+        else:
+            rhm_t = self._c2r(-1.j * self.qsys.ham(t))
+            derivs = rhm_t @ y
         return derivs
         
     def _reformatsolution(self, real_soln):
@@ -529,7 +535,8 @@ class quantumjumps(schrodint):
         # such a small times step, so the output of odeint is down sampled to the original
         # list of times self.t
         times = np.linspace(0, self.t_max, (self._ntimes-1) * self.sampleratio + 1)
-        realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
+        # realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
+        realsoln = odeint(self._derivs, real_psi0, times)
         soln = self._reformatsolution(realsoln)
         soln = soln[0::self.sampleratio]
 #        print("Length of times is {}, and length of bstate_i_solution is {}" (np.size(times), np.size(soln)))
@@ -548,7 +555,8 @@ class quantumjumps(schrodint):
         downsampled_soln = np.zeros([self._ntimes, self._dim], complex)
         downsampled_soln[0] = psi0
         for j, t in enumerate(self.t[:-1]):
-            realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
+            # realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
+            realsoln = odeint(self._derivs, real_psi0, times)
             soln = self._reformatsolution(realsoln)
             real_psi0 = realsoln[-1]
             downsampled_soln[j+1] = soln[-1]
@@ -713,7 +721,8 @@ class quantumjumps(schrodint):
         # Assumes the initial state is at time t_i in the list of times self.t /
         i = np.where(np.isclose(self.t, t_i))[0][0]
         remainingtimes = self.t[i:]
-        realsoln = odeint(self._derivs, real_psi_i, remainingtimes, args = (self._rhmatrix,))
+        # realsoln = odeint(self._derivs, real_psi_i, remainingtimes, args = (self._rhmatrix,))
+        realsoln = odeint(self._derivs, real_psi_i, remainingtimes)
         soln = self._reformatsolution(realsoln)
         return soln
         
