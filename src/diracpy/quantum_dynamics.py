@@ -371,19 +371,19 @@ class schrodint:
     # the lindblad terms represented by n by n matrices using numpy arrays. Again,
     # indexing for this dictionary should correspond with indexing for the
     # ham_obj.lindbladgamma and ham_obj.lindbladraising dictionaries.
-    def __init__(self, psi0, t, ham_obj):
+    def __init__(self, psi0, t, qsys):
         # self.psi0 = psi0
         self.t = t
-        self.ham = ham_obj
+        self.qsys = qsys
         # system dimension
-        self.dim = self.ham.dim
+        self._dim = self.qsys.dim
         # Static Hamiltonian matrix in equivalent real system of equations
-        self.rhmatrix = self.c2r(-1.j * self.ham.ham(0))
+        self._rhmatrix = self._c2r(-1.j * self.qsys.ham(0))
         # number of timesteps
-        self.ntimes = len(self.t)
+        self._ntimes = len(self.t)
         # define initial state
         self.set_initial_state(psi0)
-        self.y0 = self.c2r(self.psi0)
+        self._y0 = self._c2r(self.psi0)
     
     def set_initial_state(self, psi0):
         """
@@ -401,15 +401,15 @@ class schrodint:
         -------
         None.
         """
-        self.psi0 = self.ham.vectorize(psi0)
+        self.psi0 = self.qsys.vectorize(psi0)
     
     def solve(self):    
-        self.realsoln = odeint(self.derivs, self.y0, self.t, args = (self.rhmatrix,))
-        self.soln = self.reformatsolution(self.realsoln)
+        self.realsoln = odeint(self._derivs, self._y0, self.t, args = (self._rhmatrix,))
+        self.soln = self._reformatsolution(self.realsoln)
     
-    def c2rmatrix(self, matrix):
+    def _c2rmatrix(self, matrix):
 #        dim = np.shape(matrix)[0]
-        dim = self.dim
+        dim = self._dim
 #         Should be a square matrix. May want to put in some error handling
         realm = np.zeros([2*dim,2*dim])
         for i in range(dim):
@@ -421,9 +421,9 @@ class schrodint:
                 realm[2*i+1,2*j+1] = np.real(matrix[i,j])
         return realm
     
-    def c2rvector(self, vector):
+    def _c2rvector(self, vector):
 #        dim = np.size(vector)
-        dim = self.dim
+        dim = self._dim
 #         Should be a square matrix. May want to put in some error handling
         realv = np.zeros([2*dim])
         for j in range(dim):
@@ -431,38 +431,29 @@ class schrodint:
             realv[2*j+1] = np.imag(vector[j])
         return realv
     
-    def c2r(self, array):
+    def _c2r(self, array):
         shape = np.shape(array)
         if len(shape) == 2:
-            rarray = self.c2rmatrix(array)
+            rarray = self._c2rmatrix(array)
         elif len(shape) == 1:
-            rarray = self.c2rvector(array)
+            rarray = self._c2rvector(array)
         return rarray
     
-    def derivs(self, y, t, rhmatrix):
-#    def derivs(self, y, t):
+    def _derivs(self, y, t, rhmatrix):
         derivs = rhmatrix @ y
-#        derivs = self.c2r(-1.j * self.ham.ham(t)) @ y
         return derivs
         
-    def reformatsolution(self, real_soln):
+    def _reformatsolution(self, real_soln):
         # n_times = len(real_soln)
-        # complex_soln = np.zeros([n_times, self.dim], complex)
+        # complex_soln = np.zeros([n_times, self._dim], complex)
         ntimes = len(real_soln)
-        complex_soln = np.zeros([ntimes, self.dim], complex)
+        complex_soln = np.zeros([ntimes, self._dim], complex)
         for i, c_vector in enumerate(complex_soln):
-            for j in range(self.dim):
+            for j in range(self._dim):
                 c_vector[j] = real_soln[i,2*j] + 1.j * real_soln[i,2*j+1]
         return complex_soln
     
-class _counter:
-    def __init__(self, start=0):
-        self.i = start
-        
-    def __call__(self):
-        value = self.i
-        self.i += 1
-        return value
+    
     
 class quantumjumps(schrodint):
     # This class can be used to solve the quantm dynamics in an open quantum 
@@ -489,7 +480,7 @@ class quantumjumps(schrodint):
         self.generate_nonhermitian_ham()
         self.t_max = self.t[-1]
         # Initiallise a dictionary of basis state wavevectors
-        self.bstate_evolution = np.zeros([self.dim, self.ntimes, self.dim], complex)
+        self.bstate_evolution = np.zeros([self._dim, self._ntimes, self._dim], complex)
         self.sampleratio = kwargs.pop('sampleratio', 1)
         self._random = self._random_generator(test)
         # self._test_mode(test)
@@ -503,16 +494,16 @@ class quantumjumps(schrodint):
 #        n_proc = kwargs.pop('n_proc', 1)
 ##        self.bstate_evolution = {}
 #        with Pool(processes = n_proc) as p:
-#            p.map(self.bstate_i_evolution, range(self.dim))
+#            p.map(self.bstate_i_evolution, range(self._dim))
         # Old version with no multiprocessing
         # Initiallise a dictionary of basis state wavevectors
         self.bstate_evolution = {}
-        for i in range(self.dim):
+        for i in range(self._dim):
             # Make a wavevector psi0 which represents the i^th basis state.
-            psi0 = np.zeros([self.dim], complex)
+            psi0 = np.zeros([self._dim], complex)
             psi0[i] = 1
             # convert from complex vector of dimension n to real one of dimension 2n.
-            real_psi0 = self.c2r(psi0)
+            real_psi0 = self._c2r(psi0)
             # Calculate the non-unitary evolution of the state which starts in the 
             # i^th basis state.
             self.bstate_evolution[i] = self.deterministic_evolve(real_psi0, self.t[0])
@@ -523,23 +514,23 @@ class quantumjumps(schrodint):
         # are written here like wavevectors with only one non-zero coefficient
         # which is set to 1.
         # Make a wavevector psi0 which represents the i^th basis state.
-        psi0 = np.zeros([self.dim], complex)
+        psi0 = np.zeros([self._dim], complex)
         psi0[i] = 1
         # convert from complex vector of dimension n to real one of dimension 2n.
-        real_psi0 = self.c2r(psi0)
+        real_psi0 = self._c2r(psi0)
         # Calculate the non-unitary evolution of the state which starts in the 
         # i^th basis state.
 #        self.bstate_evolution[i] = self.deterministic_evolve(real_psi0, self.t[0])
         
-        # Make new list of times with self.ntimes * self.sampleratio points
+        # Make new list of times with self._ntimes * self.sampleratio points
         # This is becuase odeint needs a smaller time step to find accurate solutions,
         # But such fine time steps mean that the results cannot be conveniently serialised
         # during multiprocessing (pool). However, the quantum jump trajectories do not require
         # such a small times step, so the output of odeint is down sampled to the original
         # list of times self.t
-        times = np.linspace(0, self.t_max, (self.ntimes-1) * self.sampleratio + 1)
-        realsoln = odeint(self.derivs, real_psi0, times, args = (self.rhmatrix,))
-        soln = self.reformatsolution(realsoln)
+        times = np.linspace(0, self.t_max, (self._ntimes-1) * self.sampleratio + 1)
+        realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
+        soln = self._reformatsolution(realsoln)
         soln = soln[0::self.sampleratio]
 #        print("Length of times is {}, and length of bstate_i_solution is {}" (np.size(times), np.size(soln)))
         
@@ -550,15 +541,15 @@ class quantumjumps(schrodint):
         t1 = time.time()
         tstep = self.t[1] - self.t[0]
         times = np.linspace(0, tstep, self.sampleratio + 1)
-        psi0 = np.zeros([self.dim], complex)
+        psi0 = np.zeros([self._dim], complex)
         psi0[i] = 1
         # convert from complex vector of dimension n to real one of dimension 2n.
-        real_psi0 = self.c2r(psi0)
-        downsampled_soln = np.zeros([self.ntimes, self.dim], complex)
+        real_psi0 = self._c2r(psi0)
+        downsampled_soln = np.zeros([self._ntimes, self._dim], complex)
         downsampled_soln[0] = psi0
         for j, t in enumerate(self.t[:-1]):
-            realsoln = odeint(self.derivs, real_psi0, times, args = (self.rhmatrix,))
-            soln = self.reformatsolution(realsoln)
+            realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
+            soln = self._reformatsolution(realsoln)
             real_psi0 = realsoln[-1]
             downsampled_soln[j+1] = soln[-1]
         t2 = time.time()
@@ -600,7 +591,7 @@ class quantumjumps(schrodint):
         # eta = random()
         eta = self._random.random()
         # initiallise array that describes the quantum trajectory.
-        psi_array = np.zeros([self.ntimes, self.dim], complex)
+        psi_array = np.zeros([self._ntimes, self._dim], complex)
         psi_array[0] = self.psi0
         
         # For loop runs over each time step, evolving the wavefunction forward,
@@ -638,8 +629,8 @@ class quantumjumps(schrodint):
     def calc_rho(self, n):
         # estimate rho from n trajectories 
         bstate_evolution = self.bstate_evolution.copy()
-        mean_rho = np.zeros([self.ntimes, self.dim, self.dim], complex)
-        mean_rho_sq = np.zeros([self.ntimes, self.dim, self.dim], complex)
+        mean_rho = np.zeros([self._ntimes, self._dim, self._dim], complex)
+        mean_rho_sq = np.zeros([self._ntimes, self._dim, self._dim], complex)
         for i in range(n):
             trajectory = self.quantum_trajectory(bstate_evolution)
             for k, psi_k in enumerate(trajectory):
@@ -655,7 +646,7 @@ class quantumjumps(schrodint):
         # Calculates the non-unitary evolution of wavevector initially in state
         # psi0 = tpsi_amps, propagating forward by tau_index steps in time.
         # initiallise output state array
-        tpsi_k = np.zeros([self.dim], complex)
+        tpsi_k = np.zeros([self._dim], complex)
         # Build tpsi_k from the evolution of the basis states after tau_index steps.
         for i, amp in enumerate(tpsi_amps):
             tpsi_k += amp * bstate_evolution[i][tau_index]
@@ -672,10 +663,10 @@ class quantumjumps(schrodint):
         probs = self.jump_probs(tpsi_in)
         # Choose which lindbladlowering operator to apply based on a random choice,
         # weighted by the probs just defined above.
-        lindblad_keys = list(self.ham.lindbladgamma.keys())
+        lindblad_keys = list(self.qsys.lindbladgamma.keys())
         lindblad_key = self.random_choice_weighted(lindblad_keys, probs)
         # perform quantum jump by acting with this lindbladlowering operator
-        tpsi_out = self.ham.lindbladlowering[lindblad_key] @ tpsi_in
+        tpsi_out = self.qsys.lindbladlowering[lindblad_key] @ tpsi_in
         # normalise tpsi_out.
         tpsi_out = tpsi_out / np.sqrt(self.sqnorm(tpsi_out))
         
@@ -685,10 +676,10 @@ class quantumjumps(schrodint):
         # This method calculates the jump probabilites to each state a quantum
         # jump can be made to.
         probabilities = []
-        for i in self.ham.lindbladgamma:
+        for i in self.qsys.lindbladgamma:
             # Evaluate the probability to make the jump using the i^th lindbladlowering operator.
-            gamma_i = self.ham.lindbladgamma[i]
-            a_i = self.ham.lindbladlowering[i]
+            gamma_i = self.qsys.lindbladgamma[i]
+            a_i = self.qsys.lindbladlowering[i]
             a_tpsi_k = a_i @ tpsi_k
             probabilities.append(gamma_i * self.sqnorm(a_tpsi_k))
         # normalise the probailites to 1.
@@ -722,24 +713,24 @@ class quantumjumps(schrodint):
         # Assumes the initial state is at time t_i in the list of times self.t /
         i = np.where(np.isclose(self.t, t_i))[0][0]
         remainingtimes = self.t[i:]
-        realsoln = odeint(self.derivs, real_psi_i, remainingtimes, args = (self.rhmatrix,))
-        soln = self.reformatsolution(realsoln)
+        realsoln = odeint(self._derivs, real_psi_i, remainingtimes, args = (self._rhmatrix,))
+        soln = self._reformatsolution(realsoln)
         return soln
         
         
     def generate_nonhermitian_ham(self):
         # Adds the non-Hermitian terms to the Hamiltonian matrix to solve the
         # non-unitary time evoltuion
-        nonh_term = np.zeros([self.dim, self.dim], complex)
+        nonh_term = np.zeros([self._dim, self._dim], complex)
         
-        for i in self.ham.lindbladgamma:
-            gamma_i = self.ham.lindbladgamma[i]
-            adag_i = self.ham.lindbladraising[i]
-            a_i = self.ham.lindbladlowering[i]
+        for i in self.qsys.lindbladgamma:
+            gamma_i = self.qsys.lindbladgamma[i]
+            adag_i = self.qsys.lindbladraising[i]
+            a_i = self.qsys.lindbladlowering[i]
             newterm = -0.5 * gamma_i * adag_i @ a_i
             nonh_term += newterm
             
-        self.rhmatrix += self.c2r(nonh_term)
+        self._rhmatrix += self._c2r(nonh_term)
         
     def sqnorm(self, psi):
         # Returns the square norm of psi
