@@ -1,9 +1,9 @@
-quantum_dynamics.lindbladint
-----------------------------
+quantum_dynamics.quantumjumps
+-----------------------------
 
 .. currentmodule:: diracpy.quantum_dynamics
 
-.. autoclass:: diracpy.quantum_dynamics.lindbladint
+.. autoclass:: diracpy.quantum_dynamics.quantumjumps
    :members:
    :inherited-members:
    :show-inheritance:

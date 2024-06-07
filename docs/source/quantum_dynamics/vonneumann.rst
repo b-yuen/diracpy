@@ -1,5 +1,5 @@
-von Neumann integrate
----------------------
+quantum_dynamics.vonneumannint
+------------------------------
 
 .. currentmodule:: diracpy.quantum_dynamics
 

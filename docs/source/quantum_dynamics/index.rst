@@ -9,5 +9,7 @@ Quantum Dynamics
 
    vonneumann
    lindbladint
+   schrodint
+   quantumjumps
 
 .. automodule:: diracpy.quantum_dynamics

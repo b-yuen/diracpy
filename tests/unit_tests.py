@@ -751,7 +751,7 @@ class unittest_dynamics(unittest_base):
         # Deterministic evolution of basis states
         jpsolve.gen_bstate_evolution()
         # Monte Carlo simulation
-        mean_rho = jpsolve.calc_rho(100)[0]
+        mean_rho = jpsolve.calc_rho(100)
         cav_pop = np.real(mean_rho[-1,0,0])
         test = self.error_tol(cav_pop, 0.017304829099494597,tol)
         if test:

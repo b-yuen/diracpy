@@ -82,9 +82,9 @@ class vonneumannint:
     ----------
     t : numpy.ndarray
         1d array of times to solve the system for.
-    qsys : :class:`diracpy.quantum_systems.qsys`
+    qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
         The qsys object that describes the quantum system to be solved
-    rho : numpy.ndarray
+    rho0 : numpy.ndarray
         2d array representing the initial density matrix of the system in the
         basis given by qsys. If the initial density operator is given as
         a :class:`diracpy.states_operators.qop` object then the density
@@ -354,29 +354,90 @@ class schrodint:
     This class solves the Schrodinger equation given an initial wavevector
     psi0, a list of times t, and a :class:`diracpy.quantum_systems.qsys` 
     or :class:`diracpy.quantum_systems.qsys_t` object that contains the
-    hamiltonian and system basis.
+    hamiltonian and system basis. The Schrodinger equatoin is solved by
+    numerical intergrate using 
+    `scipy.integrate.odeint <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.odeint.html>`_.
+    
+    Attributes
+    ----------
+    t : numpy.ndarray
+        1d array of times to solve the system for.
+    qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
+        The qsys object that describes the quantum system to be solved
+    psi0 : numpy.ndarray
+        1d array representing the initial state of the system in the
+        basis given by qsys. If the initial density operator is given as
+        a :class:`diracpy.states_operators.ket` object then this vector
+        is generated using the `qsys.vectorize` method.
+    soln : numpy.ndarray
+        2d array containing the state vectors of the solved system for
+        each time of the attribute `t`.
+        
+    Examples
+    --------
+    Solve the Jaynes-Cummings model for an initially excited atom.
+    
+    First we need to setup the :class:'qsys <quantum_systems.qsys>'.
+    
+    >>> # define state space
+    >>> atom = dp.two_level_subspace(index=0)
+    >>> cav = dp.fock_subspace(index=1)
+    >>> # define model parameters
+    >>> Delta, g = 0, np.pi
+    >>> # define Hamiltonian
+    >>> H_0 = Delta * atom.sigma_z
+    >>> V = g * (cav.a * atom.sigma_plus + cav.adag * atom.sigma_minus)
+    >>> H = H_0 + V
+    >>> # define intial state and qsys.
+    >>> psi0 = dp.ket(['e',0])
+    >>> system = dp.qsys(H, initialstates=[psi0], n_int=2)
+    
+    Construct :class:`schrodint` solver object for this system:
+        
+    >>> schsolver = dp.schrodint(psi0, times, system)
+    
+    Solve Schrodinger equation:
+        
+    >>> schsolver.solve()
+    
+    Return solution:
+        
+    >>> schsolver.soln
+    
     """
     
-    # This class solves the Schrodinger equation given an initial wavevector
-    # psi0, a list of times t, and a hamiltonian object.
-    # The Hamiltonian object must
-    # have the following four attributes. 1. ham_obj.ham.ham(0) must be an n by n
-    # complex numpy array representing the system Hamiltonian. 
-    # 2. ham_obj.lindbladgamma must be a dictionary of coefficients (i.e. damping
-    # rates) for the linblad terms. 3. ham_obj.lindbladraising must be a dictionary
-    # of raising operators for the linblad terms, represent by n by n matrices 
-    # using numpy arrays. Indexing for the ham_obj.lindbladraising dictionary 
-    # should correspond to the indexing of ham_obj.lindbladgamma. 
-    # 4. ham_obj.lindbladlowering must be a dictionary of lowering operators for
-    # the lindblad terms represented by n by n matrices using numpy arrays. Again,
-    # indexing for this dictionary should correspond with indexing for the
-    # ham_obj.lindbladgamma and ham_obj.lindbladraising dictionaries.
     def __init__(self, psi0, t, qsys):
+        """
+        Initialise the Schrodinger equation solver.
+        
+        Initialises the object with the intial state vector
+        psi0, a list of times to solve for, and the
+        quantum system to be solved. This sets up the set of coupled
+        ordinary differential equations equivalent to the Schrodinger
+        equation.
+        
+        Parameters
+        ----------
+        psi0 : :class:`diracpy.states_operators.ket` or numpy.ndarray
+            Initial state ket or vector of the system.
+        t : numpy.ndarray
+            1D array of times (`int` or `float`) to solve the system for.
+        qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
+            Quantum system to solve, which contains all information on the
+            Hamiltonian and the basis used for the calculation.
+        dim : int
+            The dimension of the system state space.
+
+        Returns
+        -------
+        None.
+        """
+        
         # self.psi0 = psi0
         self.t = t
         self.qsys = qsys
         # system dimension
-        self._dim = self.qsys.dim
+        self.dim = self.qsys.dim
         # Static Hamiltonian matrix in equivalent real system of equations
         self._rhmatrix = self._c2r(-1.j * self.qsys.ham(0))
         # number of timesteps
@@ -403,14 +464,25 @@ class schrodint:
         """
         self.psi0 = self.qsys.vectorize(psi0)
     
-    def solve(self):    
+    def solve(self):
+        """
+        Solve Schrodinger equation.
+        
+        Solve the Schrodinger equation using `scipy.integrate.odeint`.
+        Solution returned to `soln` attribute.
+
+        Returns
+        -------
+        None.
+
+        """
         # self.realsoln = odeint(self._derivs, self._y0, self.t, args = (self._rhmatrix,))
         self.realsoln = odeint(self._derivs, self._y0, self.t)
         self.soln = self._reformatsolution(self.realsoln)
     
     def _c2rmatrix(self, matrix):
 #        dim = np.shape(matrix)[0]
-        dim = self._dim
+        dim = self.dim
 #         Should be a square matrix. May want to put in some error handling
         realm = np.zeros([2*dim,2*dim])
         for i in range(dim):
@@ -424,7 +496,7 @@ class schrodint:
     
     def _c2rvector(self, vector):
 #        dim = np.size(vector)
-        dim = self._dim
+        dim = self.dim
 #         Should be a square matrix. May want to put in some error handling
         realv = np.zeros([2*dim])
         for j in range(dim):
@@ -451,17 +523,93 @@ class schrodint:
         
     def _reformatsolution(self, real_soln):
         # n_times = len(real_soln)
-        # complex_soln = np.zeros([n_times, self._dim], complex)
+        # complex_soln = np.zeros([n_times, self.dim], complex)
         ntimes = len(real_soln)
-        complex_soln = np.zeros([ntimes, self._dim], complex)
+        complex_soln = np.zeros([ntimes, self.dim], complex)
         for i, c_vector in enumerate(complex_soln):
-            for j in range(self._dim):
+            for j in range(self.dim):
                 c_vector[j] = real_soln[i,2*j] + 1.j * real_soln[i,2*j+1]
         return complex_soln
     
     
     
 class quantumjumps(schrodint):
+    """
+    Qunatum jump simulation.
+    
+    This class solves the quantum dynamics stochastically using the quantum
+    jump (a.k.a. Mote Carlo Wavefunction) method. This simulation builds
+    quantum trajectories with periods of deterministic evolution
+    interspersed with quantum jumps. The density matrix of the system is
+    estimated by the mean of a specified number of trajectories.
+    
+    The simulation is built for a initial state psi0, a list of times t, and
+    a :class:`diracpy.quantum_systems.qsys` that contains the Hamiltonian
+    and system basis.
+    
+    Once the object is constructed the deterministic evolution is next
+    calculated using :func:`gen_bstate_evolution`, before finally running
+    the stochastic simulation with :func:`calc_rho`.
+    
+    Attributes
+    ----------
+    t : numpy.ndarray
+        1d array of times to solve the system for.
+    qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
+        The qsys object that describes the quantum system to be solved
+    psi0 : numpy.ndarray
+        1d array representing the initial state of the system in the
+        basis given by qsys. If the initial density operator is given as
+        a :class:`diracpy.states_operators.ket` object then this vector
+        is generated using the `qsys.vectorize` method.
+    soln : numpy.ndarray
+        2d array containing the state vectors of the solved system for
+        each time of the attribute `t`.
+    bstate_evolution : dict of 2d numpy.ndarray
+        Dictionary containing the time evolution of each basisstate.
+        Automatically populated using :func:`gen_bstate_evolution`, but
+        can be manually populated using :func:`bstate_i_evolution` or
+        :func:`bstate_i_long_evolution`.
+        
+    Examples
+    --------
+    Solve the open Jaynes-Cummings model for an initially excited atom.
+    
+    First we need to setup the :class:'qsys <quantum_systems.qsys>'.
+    
+    >>> # define state space
+    >>> atom = dp.two_level_subspace(index=0)
+    >>> cav = dp.fock_subspace(index=1)
+    >>> # define model parameters
+    >>> Delta, g, gamma = 0, np.pi, 0.5
+    >>> # define Hamiltonian
+    >>> H_0 = Delta * atom.sigma_z
+    >>> V = g * (cav.a * atom.sigma_plus + cav.adag * atom.sigma_minus)
+    >>> H = H_0 + V
+    >>> # define the jump operator
+    >>> jump = np.sqrt(gamma)*cav.a
+    >>> # define intial state and qsys.
+    >>> psi0 = dp.ket(['e',0])
+    >>> system = dp.qsys(H, initialstates=[psi0], n_int=2, jump_ops=jump)
+    
+    Construct :class:`quantumjumps` solver object for this system:
+        
+    >>> jpsolver = dp.quantumjumps(psi0, times, system)
+    
+    Solve the deterministic evolution
+        
+    >>> jpsolver.gen_bstate_evolution()
+    
+    Run stochastic simulation with random quantum jumps from 1000 quantum
+    trajectories.
+        
+    >>> mean_rho = jpsolver.calc_rho(1000)
+    
+    The mean value of rho (an unbaised estimator for rho) at each time is
+    returned to `mean_rho`.
+    
+    """
+    
     # This class can be used to solve the quantm dynamics in an open quantum 
     # system using the Monte Carlo wavefunction method, a.k.a. quantum jumps.
     # It is initialised with an initial wavevector (psi0), a list of times t 
@@ -481,52 +629,117 @@ class quantumjumps(schrodint):
     # the lindblad terms represented by n by n matrices using numpy arrays. Again,
     # indexing for this dictionary should correspond with indexing for the
     # ham_obj.lindbladgamma and ham_obj.lindbladraising dictionaries.
-    def __init__(self, psi0, t, ham_obj, test=False, **kwargs):
-        super().__init__(psi0, t, ham_obj)
-        self.generate_nonhermitian_ham()
+    def __init__(self, psi0, t, qsys, test=False, **kwargs):
+        """
+        Initialise the quantum jump solver.
+        
+        Initialises the object with the intial state vector
+        psi0, a list of times to solve for, and the
+        quantum system to be solved. This sets up the set of coupled
+        ordinary differential equations for the deterministic evolution
+        and creates a random generator for the jump processes.
+        
+        Parameters
+        ----------
+        psi0 : :class:`diracpy.states_operators.ket` or numpy.ndarray
+            Initial state ket or vector of the system.
+        t : numpy.ndarray
+            1D array of times (`int` or `float`) to solve the system for.
+        qsys : :class:`diracpy.quantum_systems.qsys` or :class:`diracpy.quantum_systems.qsys_t`
+            Quantum system to solve, which contains all information on the
+            Hamiltonian and the basis used for the calculation.
+        dim : int
+            The dimension of the system state space.
+        test : bool, optional.
+            When true then the random generator for calculating jump
+            processes is seeded with 0 such that the stochastic simulation
+            gives repeatable results, enabling tests for this class.
+            The default it false.
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(psi0, t, qsys)
+        self._generate_nonhermitian_ham()
         self.t_max = self.t[-1]
         # Initiallise a dictionary of basis state wavevectors
-        self.bstate_evolution = np.zeros([self._dim, self._ntimes, self._dim], complex)
+        self.bstate_evolution = np.zeros([self.dim, self._ntimes, self.dim], complex)
         self.sampleratio = kwargs.pop('sampleratio', 1)
         self._random = self._random_generator(test)
         # self._test_mode(test)
         
-    def gen_bstate_evolution(self, **kwargs):
+    def gen_bstate_evolution(self):
+        """
+        Calculate deterministic evolution for basis states.
+        
+        Calculates the determinstic evolution for each basis state, which is
+        how the basis states evolve between jumps. Since all states are 
+        a superposition of basis states, the determinstic evolution of any
+        state can be constructed from the evolution of basis states.
+        
+        The evolution of each basis states is determined by a non-Hermitian
+        version of the system Hamiltonian, and the evolution found using
+        scipy.integrate.odeint.
+        
+        The result is returned to the attribute `bstate_evolution` which
+        is an 3d numpy.ndarray of state vectors (axis 2) at each time 
+        (axis 1) for each basis state (axis 0).
+
+        Returns
+        -------
+        None.
+
+        """
         # Before calculating the quantum trajectory from a given initial wavevector,
-        # we calculate the non-unitary evolution of the basis states. Basis state
-        # are written here like wavevectors with only one non-zero coefficient
-        # which is set to 1.
-        # map over bstate_i_evolution with multiprocessing capability
-#        n_proc = kwargs.pop('n_proc', 1)
-##        self.bstate_evolution = {}
-#        with Pool(processes = n_proc) as p:
-#            p.map(self.bstate_i_evolution, range(self._dim))
-        # Old version with no multiprocessing
-        # Initiallise a dictionary of basis state wavevectors
-        self.bstate_evolution = {}
-        for i in range(self._dim):
+        # we calculate the non-unitary evolution of the basis states. 
+        # Basis state are written here like wavevectors with only one 
+        # non-zero coefficient which is set to 1.
+        for i in range(self.dim):
             # Make a wavevector psi0 which represents the i^th basis state.
-            psi0 = np.zeros([self._dim], complex)
+            psi0 = np.zeros([self.dim], complex)
             psi0[i] = 1
             # convert from complex vector of dimension n to real one of dimension 2n.
             real_psi0 = self._c2r(psi0)
             # Calculate the non-unitary evolution of the state which starts in the 
             # i^th basis state.
-            self.bstate_evolution[i] = self.deterministic_evolve(real_psi0, self.t[0])
+            self.bstate_evolution[i] = self._deterministic_evolve(real_psi0, self.t[0])
             
     def bstate_i_evolution(self, i):
+        r"""
+        Calculate evolution of :math:`i^\mathrm{th}` basis state.
+        
+        Lower level variation of :func:`gen_bstate_evolution` which allows
+        one to calculate the evolution specifically for the 
+        :math:`i^\mathrm{th}`. This is useful when used in conjunction with 
+        multiprocessing using the
+        `pathos.ParallelPool <https://pathos.readthedocs.io/en/latest/pathos.html#pathos.parallel.ParallelPool>`_.
+
+        Parameters
+        ----------
+        i : int
+            The index of the basis state for which to find the time evolution.
+
+        Returns
+        -------
+        soln : numpy.ndarray
+            2d array containing the basis state's time evolution. Each
+            entry is the state vector for the evolving state at one instance
+            in time.
+
+        """
         # Before calculating the quantum trajectory from a given initial wavevector,
         # we calculate the non-unitary evolution of the basis states. Basis state
         # are written here like wavevectors with only one non-zero coefficient
         # which is set to 1.
         # Make a wavevector psi0 which represents the i^th basis state.
-        psi0 = np.zeros([self._dim], complex)
+        psi0 = np.zeros([self.dim], complex)
         psi0[i] = 1
         # convert from complex vector of dimension n to real one of dimension 2n.
         real_psi0 = self._c2r(psi0)
         # Calculate the non-unitary evolution of the state which starts in the 
         # i^th basis state.
-#        self.bstate_evolution[i] = self.deterministic_evolve(real_psi0, self.t[0])
+#        self.bstate_evolution[i] = self._deterministic_evolve(real_psi0, self.t[0])
         
         # Make new list of times with self._ntimes * self.sampleratio points
         # This is becuase odeint needs a smaller time step to find accurate solutions,
@@ -541,18 +754,46 @@ class quantumjumps(schrodint):
         soln = soln[0::self.sampleratio]
 #        print("Length of times is {}, and length of bstate_i_solution is {}" (np.size(times), np.size(soln)))
         
-#        return self.deterministic_evolve(real_psi0, self.t[0])
+#        return self._deterministic_evolve(real_psi0, self.t[0])
         return soln
     
-    def bstate_i_long_evolution(self, i, verbose=False):
+    def bstate_i_long_evolution(self, i, sampleratio, verbose=False):
+        """
+        Calculate evolution of $i^\mathrm{th}$ basis state.
+        
+        Calculates basis state evolution for state `i`, but with
+        time steps that are `sampleratio` times smaller than those in
+        the attribute `t`. This is because the stochastic simulation
+        can sometimes require a much lower time resolution than `odeint`
+        requires to accurately capture the deterministic time evolution.
+        Such a situation occurs when far off-resonant states ar present,
+        and duration of the the time evolution required is long by 
+        comparison.
+
+        Parameters
+        ----------
+        i : int
+            The index of the basis state for which to find the time evolution.
+        verbose : bool, optional
+            Prints updates of calculation to screen so progress over 
+            a large number of states can be monitored. The default is False.
+
+        Returns
+        -------
+        soln : numpy.ndarray
+            2d array containing the basis state's time evolution. Each
+            entry is the state vector for the evolving state at one instance
+            in time.
+
+        """
         t1 = time.time()
         tstep = self.t[1] - self.t[0]
-        times = np.linspace(0, tstep, self.sampleratio + 1)
-        psi0 = np.zeros([self._dim], complex)
+        times = np.linspace(0, tstep, sampleratio + 1)
+        psi0 = np.zeros([self.dim], complex)
         psi0[i] = 1
         # convert from complex vector of dimension n to real one of dimension 2n.
         real_psi0 = self._c2r(psi0)
-        downsampled_soln = np.zeros([self._ntimes, self._dim], complex)
+        downsampled_soln = np.zeros([self._ntimes, self.dim], complex)
         downsampled_soln[0] = psi0
         for j, t in enumerate(self.t[:-1]):
             # realsoln = odeint(self._derivs, real_psi0, times, args = (self._rhmatrix,))
@@ -588,7 +829,24 @@ class quantumjumps(schrodint):
         return random_generator
             
             
-    def quantum_trajectory(self, bstate_evolution):
+    # def quantum_trajectory(self, bstate_evolution):
+    def quantum_trajectory(self):
+        """
+        Calculate quantum trajectory.
+        
+        Calculates a single quantum trajectory from the intial state of
+        the system. Each trajectory is given be periods of deterministic 
+        evolution interspersed randomly with quantum jumps. The jump 
+        probability distribution is calculated from the current state of 
+        the simulated wave function trajectory at each time step.
+
+        Returns
+        -------
+        psi_array : numpy.ndarray
+            Quantum trajectory.
+
+        """
+        bstate_evolution = self.bstate_evolution
         # This method builds a wavefunction trajectory with quantum jumps.
         # tpsi_amps are the list of coefficients to buiid the wavefunction from
         # using the time dependent state vectors of self.bstate_evolution.
@@ -599,7 +857,7 @@ class quantumjumps(schrodint):
         # eta = random()
         eta = self._random.random()
         # initiallise array that describes the quantum trajectory.
-        psi_array = np.zeros([self._ntimes, self._dim], complex)
+        psi_array = np.zeros([self._ntimes, self.dim], complex)
         psi_array[0] = self.psi0
         
         # For loop runs over each time step, evolving the wavefunction forward,
@@ -610,9 +868,9 @@ class quantumjumps(schrodint):
             # tau_index is the number of time steps since last quantum jump
             tau_index = k - t_q_index
             # calculate the non-normalised wavevector tpsi_k for this (the k^th) step.
-            tpsi_k = self.calc_tpsi_k(tpsi_amps, tau_index, bstate_evolution)
+            tpsi_k = self._calc_tpsi_k(tpsi_amps, tau_index, bstate_evolution)
             # calculate the normalisation constants for tpsi_k
-            tpsi_norm_sq = self.sqnorm(tpsi_k)
+            tpsi_norm_sq = self._sqnorm(tpsi_k)
             tpsi_norm = np.sqrt(tpsi_norm_sq)
             # Choose whether a quantum jump has taken place
             if eta < tpsi_norm_sq:
@@ -621,10 +879,10 @@ class quantumjumps(schrodint):
                 psi_array[k] = tpsi_k / tpsi_norm
             else:
                 # Quantum jump
-                # Evaluate the quantum jump using self.quantum_jump method
+                # Evaluate the quantum jump using self._quantum_jump method
                 # This method returns the normalised wavefunction after the jump,
                 # which is also equal to the new value of tpsi_amps.
-                tpsi_amps = self.quantum_jump(tpsi_k)
+                tpsi_amps = self._quantum_jump(tpsi_k)
                 psi_array[k] = tpsi_amps
                 # reset counter which marks the index of the last quantum jump
                 t_q_index = k
@@ -635,32 +893,54 @@ class quantumjumps(schrodint):
         return psi_array
     
     def calc_rho(self, n):
+        """
+        Run quantum jump simulation.
+        
+        Run simulation, taking the average of n quantum trajectories.
+        Each trajectory is given be periods of deterministic evolution
+        interspersed randomly with quantum jumps. The jump probability
+        distribution is calculated from the current state of the simulated
+        wave function trajectory at each time step.
+
+        Parameters
+        ----------
+        n : int
+            Number of quantum trajectories to use in simulation.
+
+        Returns
+        -------
+        mean_rho_sq : numpy.ndarray
+            Mean value of density matrix for each time.
+
+        """
         # estimate rho from n trajectories 
+        # estimate of variance of rho not yet implemented
         bstate_evolution = self.bstate_evolution.copy()
-        mean_rho = np.zeros([self._ntimes, self._dim, self._dim], complex)
-        mean_rho_sq = np.zeros([self._ntimes, self._dim, self._dim], complex)
+        mean_rho = np.zeros([self._ntimes, self.dim, self.dim], complex)
+        #mean_rho_sq = np.zeros([self._ntimes, self.dim, self.dim], float)
         for i in range(n):
-            trajectory = self.quantum_trajectory(bstate_evolution)
+            # trajectory = self.quantum_trajectory(bstate_evolution)
+            trajectory = self.quantum_trajectory()
             for k, psi_k in enumerate(trajectory):
                 rho_k = np.outer(psi_k, np.conj(psi_k))
                 mean_rho[k] += rho_k
-                mean_rho_sq[k] += rho_k**2
+                #mean_rho_sq[k] += np.real(np.multiply(rho_k, rho_k.conj()))
         mean_rho = mean_rho/n
-        mean_rho_sq = mean_rho_sq/n
+        #mean_rho_sq = mean_rho_sq/n
         
-        return mean_rho, mean_rho_sq
+        return mean_rho#, mean_rho_sq
             
-    def calc_tpsi_k(self, tpsi_amps, tau_index, bstate_evolution):
+    def _calc_tpsi_k(self, tpsi_amps, tau_index, bstate_evolution):
         # Calculates the non-unitary evolution of wavevector initially in state
         # psi0 = tpsi_amps, propagating forward by tau_index steps in time.
         # initiallise output state array
-        tpsi_k = np.zeros([self._dim], complex)
+        tpsi_k = np.zeros([self.dim], complex)
         # Build tpsi_k from the evolution of the basis states after tau_index steps.
         for i, amp in enumerate(tpsi_amps):
             tpsi_k += amp * bstate_evolution[i][tau_index]
         return tpsi_k
     
-    def quantum_jump(self, tpsi_in):
+    def _quantum_jump(self, tpsi_in):
         # this method performs a quantum jump of tpsi_in, and returns the state
         # after the jump
         # Jump can be to any state produced by acting on tpsi_in with any of the 
@@ -668,19 +948,19 @@ class quantumjumps(schrodint):
         # First calculate the probability of jumping to each of these states. These
         # probabilites sum to 1 as it is already decided a jump must occur when this
         # method is run.
-        probs = self.jump_probs(tpsi_in)
+        probs = self._jump_probs(tpsi_in)
         # Choose which lindbladlowering operator to apply based on a random choice,
         # weighted by the probs just defined above.
         lindblad_keys = list(self.qsys.lindbladgamma.keys())
-        lindblad_key = self.random_choice_weighted(lindblad_keys, probs)
+        lindblad_key = self._random_choice_weighted(lindblad_keys, probs)
         # perform quantum jump by acting with this lindbladlowering operator
         tpsi_out = self.qsys.lindbladlowering[lindblad_key] @ tpsi_in
         # normalise tpsi_out.
-        tpsi_out = tpsi_out / np.sqrt(self.sqnorm(tpsi_out))
+        tpsi_out = tpsi_out / np.sqrt(self._sqnorm(tpsi_out))
         
         return tpsi_out
     
-    def jump_probs(self, tpsi_k):
+    def _jump_probs(self, tpsi_k):
         # This method calculates the jump probabilites to each state a quantum
         # jump can be made to.
         probabilities = []
@@ -689,7 +969,7 @@ class quantumjumps(schrodint):
             gamma_i = self.qsys.lindbladgamma[i]
             a_i = self.qsys.lindbladlowering[i]
             a_tpsi_k = a_i @ tpsi_k
-            probabilities.append(gamma_i * self.sqnorm(a_tpsi_k))
+            probabilities.append(gamma_i * self._sqnorm(a_tpsi_k))
         # normalise the probailites to 1.
         total = sum(probabilities)
         if total != 0:
@@ -697,7 +977,7 @@ class quantumjumps(schrodint):
        
         return probabilities
     
-    def random_choice_weighted(self, choices, weights):
+    def _random_choice_weighted(self, choices, weights):
         # returns random choice from choices, where each choice has probability given by weights
         # Assumes that sum of weights is 1.
         cumulative_prob = weights
@@ -715,7 +995,7 @@ class quantumjumps(schrodint):
         
         return choices[i]
             
-    def deterministic_evolve(self, real_psi_i, t_i):
+    def _deterministic_evolve(self, real_psi_i, t_i):
         # Evaluates the non-unitary evolution from initial state real_psi_i 
         # (expressed with real numbers with double the dimension to the complex wavector).
         # Assumes the initial state is at time t_i in the list of times self.t /
@@ -727,10 +1007,10 @@ class quantumjumps(schrodint):
         return soln
         
         
-    def generate_nonhermitian_ham(self):
+    def _generate_nonhermitian_ham(self):
         # Adds the non-Hermitian terms to the Hamiltonian matrix to solve the
         # non-unitary time evoltuion
-        nonh_term = np.zeros([self._dim, self._dim], complex)
+        nonh_term = np.zeros([self.dim, self.dim], complex)
         
         for i in self.qsys.lindbladgamma:
             gamma_i = self.qsys.lindbladgamma[i]
@@ -741,7 +1021,7 @@ class quantumjumps(schrodint):
             
         self._rhmatrix += self._c2r(nonh_term)
         
-    def sqnorm(self, psi):
+    def _sqnorm(self, psi):
         # Returns the square norm of psi
         n2 = 0
         for c in psi:

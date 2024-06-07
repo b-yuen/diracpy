@@ -1,5 +1,5 @@
-Time-Dependent Quantum Systems
-------------------------------
+quantum_systems.qsys_t
+----------------------
 
 .. currentmodule:: diracpy.quantum_systems
 

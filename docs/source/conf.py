@@ -18,7 +18,7 @@ graphviz_dot = 'dot'  # Assuming 'dot' is in your PATH
 project = 'Diracpy'
 copyright = '2024, Ben Yuen'
 author = 'Ben Yuen'
-release = '1.0'
+release = '1.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -1,5 +1,5 @@
-Quantum Systems
----------------
+quantum_systems.qsys
+--------------------
 
 .. currentmodule:: diracpy.quantum_systems
 

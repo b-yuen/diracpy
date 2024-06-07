@@ -9,4 +9,4 @@ states_operators.bra
    :inherited-members:
    :special-members:
    :show-inheritance:
-   :exclude-members: __weakref__
+   :exclude-members: __weakref__, __hash__

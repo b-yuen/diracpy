@@ -1,9 +1,9 @@
-quantum_dynamics.lindbladint
-----------------------------
+quantum_dynamics.schrodint
+--------------------------
 
 .. currentmodule:: diracpy.quantum_dynamics
 
-.. autoclass:: diracpy.quantum_dynamics.lindbladint
+.. autoclass:: diracpy.quantum_dynamics.schrodint
    :members:
    :inherited-members:
    :show-inheritance:
