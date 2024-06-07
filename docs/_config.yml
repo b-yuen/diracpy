@@ -1,0 +1,40 @@
+# _config.yml
+
+# Site settings
+title: DiracPy Documentation
+description: Documentation for the DiracPy project
+#baseurl: "" # If your site is served from a subpath, set this to the subpath (e.g., "/diracpy")
+#url: "https://b-yuen.github.io/diracpy/" # Replace with your GitHub Pages URL
+#
+## Theme settings
+#theme: insipid
+
+# Build settings
+source: docs
+destination: _site
+#markdown: kramdown
+#
+## Exclude specific files or directories from the build process
+#exclude:
+#  - Gemfile
+#  - Gemfile.lock
+#  - node_modules
+#  - vendor/bundle/
+#  - vendor/cache/
+#  - vendor/gems/
+#  - vendor/ruby/
+#
+## Plugins
+#plugins:
+#  - jekyll-feed
+#  - jekyll-sitemap
+#
+## Configuration for the insipid theme (if applicable)
+#insipid:
+#  # Customize theme settings here (if the insipid theme has configurable options)
+#  color_scheme: "light"
+#  sidebar: true
+#
+## Other optional settings
+#paginate: 5 # Number of posts to show per page (if using pagination)
+#
