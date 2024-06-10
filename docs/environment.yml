@@ -1,7 +1,7 @@
 name: dp_dev38
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
   - alabaster=0.7.12=pyhd3eb1b0_0
   - babel=2.11.0=py38hecd8cb5_0
