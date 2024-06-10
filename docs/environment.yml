@@ -21,7 +21,7 @@ dependencies:
   - latexcodec=2.0.1
   - libcxx=14.0.6
   - libffi=3.4.4
-  - libgfortran=5.0.0
+  - libgfortran
   - libgfortran5=11.3.0
   - libopenblas=0.3.21
   - llvm-openmp=14.0.6
