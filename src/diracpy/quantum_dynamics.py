@@ -1031,19 +1031,64 @@ class quantumjumps(schrodint):
     
 # test comment    
 class unitaryevolution:
+    """
+    Unitary evolution.
+    
+    Finds the time evolution of the density matrix/operator by a unitary
+    transformation. This method can be applied when the Hamiltonian has no
+    explicit time dependence. The unitary evolution operator is found by
+    diagonalising the Hamiltonian.
+    
+    Attributes
+    ----------
+    t : numpy.ndarray
+        1d array of times to solve the system for.
+    qsys : :class:`diracpy.quantum_systems.qsys`
+        The qsys object that describes the quantum system to be solved
+    rho0 : numpy.ndarray
+        2d array representing the initial density matrix of the system in the
+        basis given by qsys. If the initial density operator is given as
+        a :class:`diracpy.states_operators.qop` object then the density
+        matrix is generated using the `qsys.vectorize` method.
+    soln : numpy.ndarray
+        3d array containing the density matrices of the solved system for
+        each time of the attribute `t`.
+    """
+    
     # z0 is the initial state of the system described by its density matrix.
     # z0 is represented by a 2d complex numpy array with the dimensions of the Hamiltonian
     # times is linearly spaced numpy array of times for which the system is solved for
     # This class is used to solve the dynamics for a static Hamiltonian. It uses the 
     # the Hamiltonian function (of time) in the ham_obj, evaluated at time zero.
-    def __init__(self, z0, times, ham_obj_or_matrix):
+    def __init__(self, rho0, times, qsys):
+        """
+        Construct unitary solver.
         
+        Initialises the object with times, initial state (density operator)
+        and the :class:`diracpy.quantum_systems.qsys` that describes the
+        system.
+        
+        Parameters
+        ----------
+        rho0 : :class:`diracpy.states_operators.qop` or numpy.ndarray
+            Initial density operator or density matrix of the system.
+        times : numpy.ndarray
+            1D array of times (`int` or `float`) to solve the system for.
+        qsys : :class:`diracpy.quantum_systems.qsys`
+            Quantum system to solve, which contains all information on the
+            Hamiltonian and the basis used for the calculation.
+
+        Returns
+        -------
+        None.
+        """
         self.t = times
-        self.z = z0
+        self.set_initial_state(rho0)
+        # self.z = z0
         # self.ham = ham_obj
         # self.dim = self.ham.dim
         # self.hmatrix = self.ham.ham(0)
-        self._get_ham(ham_obj_or_matrix)
+        self._get_ham(qsys)
         
     def _get_ham(self, ham_in):
         if type(ham_in) == np.ndarray:
@@ -1060,29 +1105,73 @@ class unitaryevolution:
         self.dim = ham_in.dim
         self.hmatrix = ham_in.ham(0)
         
-    def eigensolve(self):
+    def set_initial_state(self, rho0):
+        """
+        Define initial state.
+        
+        Define the initial state using the density matrix. When a 
+        :class:`diracpy.states_operators.qop` is give, it is vecrtotized 
+        by this method.
+
+        Parameters
+        ----------
+        rho0 : :class:`diracpy.states_operators.qop` or numpy.ndarray
+            Initial density operator or density matrix of the system.
+
+        Returns
+        -------
+        None.
+        """
+        if type(rho0) == np.ndarray:
+            rho = rho0
+        else:
+            rho = self.qsys.vectorize(rho0)
+        self.rho0 = rho
+        
+    def _eigensolve(self):
         self.evals, self.evecs = np.linalg.eigh(self.hmatrix)
         
-    def u_op(self, t):
+    def _u_op(self, t):
         u = np.zeros([self.dim, self.dim], complex)
         for i in range(self.dim):
             u[i,i] = np.exp(-1.j * self.evals[i] * t)
-        u = self.evecs @ u @ self.hc(self.evecs)
+        u = self.evecs @ u @ self._hc(self.evecs)
         return u
         
-    def hc(self, np2darray):
+    def _hc(self, np2darray):
         return np.transpose(np.conj(np2darray))
     
     def solve(self):
-        self.eigensolve()
+        """
+        Solve system.
+        
+        Solves the system for array of uniformly spaces times, `t`, by 
+        applying a unitary transformation to the density matrix at each
+        time step.
+        
+        The solution is stored in the `soln` attribute of the object.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self._eigensolve()
+        self.soln = self._evolve(self.rho0)
+            
+    def _evolve(self, rho0):
         dt = self.t[1] - self.t[0]
         num_t = np.size(self.t)
-        u_dt = self.u_op(dt)
-        ud_dt = self.hc(u_dt)
-        self.soln = np.zeros([num_t, self.dim, self.dim], complex)
+        u_dt = self._u_op(dt)
+        ud_dt = self._hc(u_dt)
+        z = self.rho0
+        soln = np.zeros([num_t, self.dim, self.dim], complex)
         for i, t in enumerate(self.t):
-            self.soln[i] = self.z
-            self.z = u_dt @ self.z @ ud_dt
+            soln[i] = z
+            z = u_dt @ z @ ud_dt
+        return soln
+        
             
 '''
 Solves a systme with a non-Hermitian (also works for Hermitian) Hamiltonian
