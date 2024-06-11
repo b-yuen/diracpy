@@ -67,6 +67,6 @@ dependencies:
   - zipp=3.17.0
   - zlib=1.2.13
   - pip:
-    - -e .
+    - -e ./src
 prefix: /opt/anaconda3/envs/dp_dev38
 
