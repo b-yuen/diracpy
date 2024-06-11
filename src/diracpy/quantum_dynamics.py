@@ -1031,7 +1031,7 @@ class quantumjumps(schrodint):
     
 # test comment    
 class unitaryevolution:
-    """
+    r"""
     Unitary evolution.
     
     Finds the time evolution of the density matrix/operator by a unitary
@@ -1053,6 +1053,44 @@ class unitaryevolution:
     soln : numpy.ndarray
         3d array containing the density matrices of the solved system for
         each time of the attribute `t`.
+        
+    Examples
+    --------
+    Solve the Jaynes-Cummings model for an initally excited atom.
+    
+    First define the system:
+        
+    >>> atom = dp.two_level_subspace(index=0)
+    >>> cav = dp.fock_subspace(index=1)
+    >>> Delta, g = 0, np.pi
+    >>> H_0 = Delta * atom.sigma_z
+    >>> V = g * (cav.a * atom.sigma_plus + cav.adag * atom.sigma_minus)
+    >>> H = H_0 + V
+    >>> psi0 = dp.ket(['e',0])
+    >>> system = dp.qsys(H, initialstates=[psi0], n_int=2)
+
+    Construct unitary solver (:class:`unitaryevolution` object):
+        
+    >>> times = np.linspace(0,2,100)
+    >>> rho0 = psi0 * psi0.conj()
+    >>> usolver = dp.unitaryevolution(rho0, times, system)
+    
+    Solve dynamics via unitary evolution:
+    
+    >>> usolver.solve()
+
+    Plot the solution - the populations of the :math:`\vert e,0 \rangle`
+    and :math:`\vert g , 1 \rangle`.
+        
+    >>> fig, ax = plt.subplots(1,1)
+    >>> labels = [state for state in system.basis]
+    >>> for i in range(system.dim):
+    >>>     ax.plot(times, 
+    >>>             np.real(usolver.soln[:,i,i]),
+    >>>             label=labels[i])
+    >>> plt.legend(loc=1)
+    >>> plt.show()
+    
     """
     
     # z0 is the initial state of the system described by its density matrix.
@@ -1083,6 +1121,7 @@ class unitaryevolution:
         None.
         """
         self.t = times
+        self.qsys = qsys
         self.set_initial_state(rho0)
         # self.z = z0
         # self.ham = ham_obj
@@ -1095,7 +1134,7 @@ class unitaryevolution:
             _get = self._get_hmatrix
         else:
             _get = self._get_ham_obj
-        return _get(ham_in)
+        _get(ham_in)
     
     def _get_hmatrix(self, ham_in):
         self.hmatrix = ham_in

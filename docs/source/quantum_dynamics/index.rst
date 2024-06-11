@@ -11,5 +11,6 @@ Quantum Dynamics
    lindbladint
    schrodint
    quantumjumps
+   unitaryevolution
 
 .. automodule:: diracpy.quantum_dynamics
