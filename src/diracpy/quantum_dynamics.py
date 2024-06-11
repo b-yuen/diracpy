@@ -1212,19 +1212,22 @@ class unitaryevolution:
         return soln
         
             
-'''
-Solves a systme with a non-Hermitian (also works for Hermitian) Hamiltonian
-by applying a similarity transformation to the state vector psi into a basis
-where the Hamiltonian is diagonal.
-
-input psi0 is the state vector at t=0.
-
-Note this may not work in all cases since non-Hermitian matrices are not
-always diagonalizeable. This may be the case when eigenvalues of the 
-non-Hermitian matrix are degenerate - further work on this is needed and no
-checks on the Hamiltonian matrix are made.
-'''
 class non_hermitian_unitaryevolution:
+    """
+    Solve non-Hermitian system evolution by similarity transformation.
+    
+    Solves a systme with a non-Hermitian (also works for Hermitian) Hamiltonian
+    by applying a similarity transformation to the state vector psi into a basis
+    where the Hamiltonian is diagonal.
+
+    input psi0 is the state vector at t=0.
+
+    Note this may not work in all cases since non-Hermitian matrices are not
+    always diagonalizeable. This may be the case when eigenvalues of the 
+    non-Hermitian matrix are degenerate - further work on this is needed and no
+    checks on the Hamiltonian matrix are made.
+    """
+    
     def __init__(self, psi0, times, ham_obj_or_matrix):
         
         self.t = times
