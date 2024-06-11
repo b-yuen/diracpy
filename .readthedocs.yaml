@@ -22,6 +22,8 @@ sphinx:
 # Configuration for conda environment
 conda:
   environment: docs/environment.yml
+  post:
+    - pip install -e .
 
 # Optionally build your docs in additional formats such as PDF and ePub
 # formats:
