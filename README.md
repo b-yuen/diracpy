@@ -2,6 +2,8 @@
 
 Diracpy is a python package for building quantum models quickly and effectively using Dirac notation. Diracpy provides a natural syntax for quantum models, enabling developers to focus on the physical model rather than the task of translating quantum physics to python code. Diracpy contains a diverse toolbox for solving the quantum dynamics of the model once it is built. It is therefore well suited to physicists with a good grasp of quantum theory and Dirac notation who want to translate this into a model that can be rapidly built and efficiently solved numerically.
 
+Full API documentation is found at <https://diracpy.readthedocs.io/en/latest/index.html>.
+
 Diracpy's functionality is split between four modules, `states_operators`, `subspaces`, `quantum_systems`, and `quantum_dynamics`. The `states_operators` module provides the basic definitions for `bra`, `ket` and `qop` (quantum operator) objects, together with all the neccesary binary composition rules and relations needed to define the Hilbert space of `ket` vectors, the dual space of `bra` vectors which maps `ket` vectors to scalars, and the `qop` operators that act on these. 
 
 The `subspaces` module contains several pre-defined state spaces, consiting of a rule for how `ket` and `bra` vectors are indexed, and the rules for how the action of the relevent `qop` operatos modify these indexes and any complex coeffecient when mapping onto the output `bra` or `ket`.
@@ -9,8 +11,6 @@ The `subspaces` module contains several pre-defined state spaces, consiting of a
 The `quantum_systems` module builds a full quantum system from the user defined Hamiltonian `qop`, and a list of initial states. It uses the Hamiltonian to find states connected to the initial states via the interactions of the Hamiltonian. The contruction of the state space is automatically truncated after a user specified number of interactions. When the number of interactions specified is sufficiently large, the entire closed state space is constructed. The `quantum_system` objects allow states and operators to be automatically vectorized for subsequent numerical simulations of the quantum dynamics.
 
 The `quantum_dynamics` module solves the quantum dynamics of the quantum system once it is built. A wide variety of methods are available, allowing one to choose the most efficient method for the particular problem. This includes most prevalent dynamical equations and methods typically found in quantum electrodynamics. This module includes dynamical methods based on numerical intergration, methods based on eigen-decomposition, and stochastic methods. It supports both open and closed quantum systems.
-
-See also the full API documentation <https://diracpy.readthedocs.io/en/latest/index.html>.
 
 ## Installation
 
