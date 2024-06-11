@@ -10,6 +10,8 @@ The `quantum_systems` module builds a full quantum system from the user defined 
 
 The `quantum_dynamics` module solves the quantum dynamics of the quantum system once it is built. A wide variety of methods are available, allowing one to choose the most efficient method for the particular problem. This includes most prevalent dynamical equations and methods typically found in quantum electrodynamics. This module includes dynamical methods based on numerical intergration, methods based on eigen-decomposition, and stochastic methods. It supports both open and closed quantum systems.
 
+See also the full API documentation <https://diracpy.readthedocs.io/en/latest/index.html>.
+
 ## Installation
 
 Source code and binary files can be downloaded from <https://github.com/b-yuen/diracpy>. To install from the source, navigate to the desired local directory that contains the project. Either download the project into this direcotry, or use
@@ -153,7 +155,7 @@ For full API documentation, examples and tutorial see <https://github.com/b-yuen
 
 ## Support
 
-For support see first documentation at <https://github.com/b-yuen/diracpy>. Issues can be raised here also. If you are interested in using this package and need additional support you can contact the developers via the research group <https://www.birmingham.ac.uk/research/activity/physics/quantum/metamaterials>.
+For support see first documentation at <https://diracpy.readthedocs.io/en/latest/index.html>. Issues can be raised here also. If you are interested in using this package and need additional support you can contact the developers via the research group <https://www.birmingham.ac.uk/research/activity/physics/quantum/metamaterials>.
 
 ## Roadmap
 
