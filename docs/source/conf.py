@@ -8,7 +8,7 @@
 import os
 import sys
 #sys.path.insert(0, os.path.abspath('/Users/benjaminyuen/Documents/Documents - Benjamin’s MacBook Pro/Ben/physics/Birmingham/QuantumCode/diracpy_project/src/diracpy'))
-sys.path.insert(0, os.path.abspath('./src'))
+sys.path.insert(0, os.path.abspath('./'))
 
 # Path to the Graphviz dot executable
 graphviz_dot = 'dot'  # Assuming 'dot' is in your PATH
