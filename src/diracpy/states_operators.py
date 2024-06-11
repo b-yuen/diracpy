@@ -209,13 +209,24 @@ class qvec:
                 if cnum == 0:
                     pass
                 elif cnum == 1:
-                    output += self.type + str(list(state)) + ' + '
+                    # output += self.type + str(list(state)) + ' + '
+                    output += self.type + self._str_label(state) + ' + '
                 else:
-                    output += str(cnum) + ' * ' + self.type + str(list(state)) + ' + '
+                    # output += str(cnum) + ' * ' + self.type + str(list(state)) + ' + '
+                    output += (str(cnum) + ' * ' + 
+                               self.type + self._str_label(state) + ' + ')
             output = output[:-3]
         else:
             output = self.type+'[]'
         return output
+    
+    def _str_label(self, state_indices):
+        # turns state labels (keys of self.vec) into strings
+        str_out = ''
+        for index in state_indices:
+            str_out += str(index) + ','
+        str_out = "({})".format(str_out[:-1])
+        return str_out
     
     def __neg__(self):
         """
