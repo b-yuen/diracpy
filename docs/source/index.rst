@@ -22,6 +22,9 @@ using state vectors and operators, diracpy deftly handles the intricate
 groundwork: from constructing suitable bases to adeptly vectorizing and
 ultimately solving the equations of motion.
 
+For setup guide, source and binary files see the 
+`GitHub page <https://github.com/b-yuen/diracpy>`_.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

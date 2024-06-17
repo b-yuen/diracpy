@@ -51,6 +51,9 @@ html_permalinks_icon = '§'
 # html_theme = 'insipid'
 html_static_path = ['_static']
 
+# logo
+html_logo = "logo.png"
+
 # -- Extension configuration -------------------------------------------------
 # Configure the bibtex_bibfiles setting
 bibtex_bibfiles = ['references.bib']
