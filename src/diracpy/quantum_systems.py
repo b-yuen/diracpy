@@ -195,7 +195,7 @@ class qsys:
             for state in basis:
                 state_out = self.ham_op * state
                 state_out_components = [ket(component_state) for component_state in state_out.vec.keys()]
-                [new_states.append(new_state) for new_state in state_out_components if new_state not in basis]
+                [new_states.append(new_state) for new_state in state_out_components if (new_state not in basis and new_state not in new_states)]
             basis += new_states
         return basis
     
