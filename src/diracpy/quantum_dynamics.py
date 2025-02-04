@@ -758,7 +758,7 @@ class quantumjumps(schrodint):
         return soln
     
     def bstate_i_long_evolution(self, i, sampleratio, verbose=False):
-        """
+        r"""
         Calculate evolution of $i^\mathrm{th}$ basis state.
         
         Calculates basis state evolution for state `i`, but with
